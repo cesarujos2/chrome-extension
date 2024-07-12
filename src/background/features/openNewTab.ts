@@ -1,4 +1,4 @@
-export function openNewTab(url: string, actions: { action: string } = { action: '' }) {
+export function openNewTab(url: string, actions: { action: string, data: any } = { action: '', data: {} }) {
     console.log('openNewTab')
     chrome.tabs.create({ url: url }, function (tab) {
         if (actions.action.length > 0) {
