@@ -1,1 +1,332 @@
-console.log('content')
+import { Request } from "../interfaces/frontData";
+
+chrome.runtime.onMessage.addListener(function (request: Request) {
+    if (request.action === 'loadRoadMap') {
+        const fromLogin = document.getElementById('frmLogin') as HTMLFormElement
+        if (!fromLogin) {
+            const roadmap = request.data.document_name
+            if (roadmap.length > 0) {
+                const inputHRSTD = document.getElementById('idformbusq:idhrbuscar') as HTMLInputElement
+                const buttonBuscarSTD = document.getElementById('idformbusq:btnBuscarHojaDeRuta')
+                const anio = document.getElementById('idformbusq:idanioexpediente_input') as HTMLInputElement
+                if (inputHRSTD && buttonBuscarSTD && anio) {
+                    inputHRSTD.value = roadmap.split("-")[1];
+                    anio.value = roadmap.split("-")[2]
+                    buttonBuscarSTD.click();
+                    chrome.runtime.sendMessage({ action: "waiting", nextScript: "isRepeatRoadMap" });
+                }
+            }
+        }
+    }
+    if (request.action === 'isRepeatRoadMap') {
+        let divPrincipal = document.getElementById("formvistahojaderuta:tabview");
+        const listaUl = divPrincipal?.querySelector("div")?.querySelector("div")?.querySelector("div")?.querySelector("div");
+        if (!listaUl) {
+            let tableListHR = document.getElementById("formvistahojaderuta:tabview:datosVista_data")?.children;
+            if (tableListHR) {
+                for (let i = 0; i < tableListHR.length; i++) {
+                    if (tableListHR[i].children[7].textContent?.split("-")[0] == "E") {
+                        tableListHR[i].querySelectorAll("a")[0].click();
+                        if (!request.data.options.onlySearch) {
+                            chrome.runtime.sendMessage({ action: "waiting", nextScript: "clickOnGenerateDocument" });
+                        }
+                        break
+                    }
+                }
+            }
+        } else if (!request.data.options.onlySearch) {
+            chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "clickOnGenerateDocument" });
+        }
+    }
+
+    if (request.action === 'clickOnGenerateDocument') {
+        let divPrincipal = document.getElementById("formvistahojaderuta:tabview");
+        const listaUl = divPrincipal?.querySelector("div")?.querySelector("div")?.querySelectorAll("div")[0].querySelector("div");
+
+        if (listaUl) {
+            let encontrado = false
+            for (let i = 0; i < listaUl.children.length; i++) {
+                if (listaUl.children[i].textContent == "Generar doc. electronico") {
+                    encontrado = true;
+                    if (i > 3) {
+                        let liGenerarDoc = listaUl.children[i];
+                        const enlace = liGenerarDoc as HTMLAnchorElement;
+                        enlace.click()
+                        setTimeout(() => {
+                            let numAdmin = document.getElementById('frmSelecctNumeracion:btnNumAdm') as HTMLButtonElement
+                            numAdmin.click()
+                            chrome.runtime.sendMessage({ action: "waiting", nextScript: "removeResponsible" });
+                        }, 1000)
+                    } else if (i <= 3) {
+                        showModal("Ya fue derivado! ")
+                    }
+                    break
+                }
+            }
+            if (!encontrado) {
+                showModal("No se puede derivar")
+            }
+        }
+    }
+    if (request.action === 'removeResponsible') {
+        // showModal("Cargando informacion...")
+        let firmantes = document.getElementById("idproyectonuevo:idtabla_visadores_readonly_data") as any
+        firmantes?.children[0].children[7].children[0].click()
+        chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "typeOfDocument", data: { delay: 200 } });
+    }
+
+    if (request.action === 'typeOfDocument') {
+        let typeDoc = document.getElementById("idproyectonuevo:iddocumentos_label") as HTMLLabelElement
+        typeDoc.click()
+        let ofType = document.getElementById("idproyectonuevo:iddocumentos_14") as HTMLLIElement
+        ofType.click()
+        chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addSubject", data: { delay: 200 } });
+    }
+    if (request.action === 'addSubject') {
+        let asunto = document.getElementById("idproyectonuevo:idAsCP") as HTMLTextAreaElement
+        asunto.textContent = ''
+        if (request.data.tipo_expediente_c == 'desestimiento') {
+            asunto.textContent = `Solicitud de desistimiento de la Ficha Técnica para Proyectos de Infraestructura de Telecomunicaciones que NO están sujetos al Sistema Nacional de Evaluación de Impacto Ambiental (SEIA) del proyecto ${request.data.nameProyect}`
+        } else {
+            switch (request.data.status_id) {
+                case 'incompleta':
+                case 'completa':
+                case 'amerita_evap':
+                    asunto.textContent = `Remite resultado de verificación de la Ficha Técnica Ambiental presentada para el proyecto de infraestructura de telecomunicaciones que no está sujeto al Sistema Nacional de Evaluación de Impacto Ambiental - SEIA`
+                    break;
+                case 'duplicada':
+                case 'improcedente':
+                    asunto.textContent = `Verificación de la Ficha Técnica presentada para el proyecto de Infraestructura de Telecomunicaciones denominado "${request.data.nameProyect}" que no está sujeto al Sistema Nacional de Evaluación de Impacto Ambiental (SEIA)`
+                    break;
+            }
+        }
+        chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addOrganicUnit", data: { delay: 200 } });
+    }
+
+    if (request.action === 'addOrganicUnit') {
+        let openUO = document.getElementById("idproyectonuevo:seccionBuscarFirmante")?.querySelector("button")
+        if (openUO) {
+            openUO.click()
+            delayScript(500, () => {
+                let inputUO = document.getElementById("myDialogUO")?.querySelectorAll("input")[1]
+                if (inputUO) {
+                    inputUO.value = '26'
+                    inputUO.dispatchEvent(new Event('keyup', {
+                        bubbles: true,
+                        cancelable: true,
+                    }));
+                }
+                delayScript(500, () => {
+                    let check26 = document.getElementById("myDialogUO")?.querySelector("table")?.querySelector("tbody")?.querySelector("tr")?.querySelector("input")
+                    let aceptarUO = document.getElementById("myDialogUO")?.querySelector("form")?.querySelector("a")
+                    let addFirm = document.getElementById("idproyectonuevo:seccionAddFirmante")?.querySelector("button")
+                    if (check26 && aceptarUO && addFirm) { check26.click(); aceptarUO.click(); addFirm.click() }
+                    chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addVisador", data: { delay: 200 } });
+                })
+            })
+        }
+    }
+
+    if (request.action === 'addVisador') {
+        document.getElementById("idproyectonuevo:seccionBotonesVisador")?.querySelectorAll("button")[1].click()
+        delayScript(900, () => {
+            let userSTD = document.getElementById("idproyectonuevo:elaboradoPor") as HTMLInputElement
+            document.getElementById("myDialogVisadores")?.querySelector("table")?.querySelector("tbody")?.querySelectorAll("tr")[1].querySelector("input")?.click()
+            if (!request.data.options.despachar) {
+                delayScript(200, () => {
+                    getUserByName(userSTD.value, true)
+                    delayScript(300, () => {
+                        getUserByName('VICTOR ORLANDO')
+                        delayScript(300, () => {
+                            chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "mayNeedUODestination" });
+                        })
+                    })
+                })
+            } else {
+                delayScript(200, () => {
+                    getUserByName('VICTOR ORLANDO');
+                    delayScript(300, () => {
+                        chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "mayNeedUODestination" });
+                    })
+                })
+            }
+        })
+    }
+
+    if (request.action === 'mayNeedUODestination') {
+        if (request.data.status_id == 'amerita_evap') {
+            const buttonOpenDestination = document.getElementById("idproyectonuevo:seccionElegirDestinatarios")?.getElementsByTagName("button")[0] as HTMLButtonElement
+            if (buttonOpenDestination) buttonOpenDestination.click()
+            delayScript(500, () => {
+                let inputUO = document.getElementById("dlgform_uo")?.querySelectorAll("input")[2]
+                if (inputUO) {
+                    inputUO.value = '29';
+                    inputUO.dispatchEvent(new Event('keyup', {
+                        bubbles: true,
+                        cancelable: true,
+                    }));
+                }
+                delayScript(300, () => {
+                    let checkUODestination = document.getElementById("dlgform_uo")?.querySelectorAll("table")[0].children[1].children[0].children[1].querySelector("span") as HTMLSpanElement
+                    if (checkUODestination) {
+                        checkUODestination.click()
+                        delayScript(200, () => {
+                            document.getElementById("dlgform_uo")?.querySelectorAll("button")[0].click()
+                            delayScript(200, () => {
+                                chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "selectAdministered" });
+                            })
+                        })
+                    }
+                })
+            })
+        } else {
+            chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "selectAdministered" });
+        }
+    }
+
+    if (request.action === 'selectAdministered') {
+        document.getElementById("idproyectonuevo:tipoUo_label")?.click()
+        delayScript(200, () => {
+            const itemsDestination = Array.from(document.getElementById("idproyectonuevo:tipoUo_panel")?.getElementsByTagName("li") ?? [])
+
+            for (const item of itemsDestination) {
+                if (item.textContent?.includes('PERSONA JURIDICA')) {
+                    item.click()
+                    break;
+                }
+            }
+            delayScript(200, () => {
+                const buttonOpenDestination = document.getElementById("idproyectonuevo:seccionElegirDestinatarios")?.getElementsByTagName("button")[0] as HTMLButtonElement
+                if (buttonOpenDestination) buttonOpenDestination.click()
+                delayScript(500, () => {
+                    const inputsJuridica = document.getElementById("dlg_ruc")?.querySelectorAll("input")
+                    const textareaJuridica = document.getElementById("dlg_ruc")?.querySelector("textarea")
+                    if (inputsJuridica && inputsJuridica[1] && inputsJuridica[7] && textareaJuridica) {
+                        console.log(request.data)
+                        inputsJuridica[1].value = request.data.nro_doc_identificacion_c;
+                        inputsJuridica[7].value = request.data.first_name + ' ' + request.data.last_name;
+                        textareaJuridica.textContent = `El administrado autorizó notificación vía correo electrónico a los siguientes correos: ${request.data.emails_concat}`;
+                        const buttons = document.getElementById("dlg_ruc")?.querySelectorAll("button")
+                        if (buttons && buttons[1] && buttons[0]) {
+                            buttons[1].click()
+                            delayScript(1000, () => {
+                                buttons[0].click()
+                                delayScript(100, () => {
+                                    document.getElementById("idproyectonuevo:seccionBotones")?.querySelector("button")?.click()
+                                    if (!request.data.options.noDownload) {
+                                        delayScript(500, () => {
+                                            chrome.runtime.sendMessage({ action: "openTefi", nextScript: "downloadFitac" });
+                                        })
+                                    }
+                                })
+                            })
+                        }
+
+                    }
+                })
+            })
+        })
+    }
+    if (request.action === 'downloadFitac') {
+        const tipoExpediente = request.data.tipo_expediente
+        const statusId = request.data.status_id
+
+        var form = document.getElementById('popupForm') as HTMLFormElement;
+
+        if (form != null) {
+            if (tipoExpediente == 'desestimiento') {
+                form.templateID.value = '85990911-ff40-4882-f0bc-5ddc0f8567da';
+            } else{
+                switch (statusId) {
+                    case 'completa':
+                    case 'incompleta':
+                        form.templateID.value = 'ed00bd5d-4f85-19af-a915-5dc2f57dcd32';
+                        break;
+                    case 'amerita_evap':
+                        form.templateID.value = '73107e4c-c398-bc4f-eac3-5dc5a402e07f';
+                        break;
+                    case 'improcedente':
+                        form.templateID.value = '1fbf8a11-9a56-7edb-af18-5de8291aaa7e';
+                        break;
+                    case 'duplicada':
+                        form.templateID.value = '1a689f7a-1c89-6e2d-c4e4-5e0fd3489b8c';
+                        break;
+                }
+                form.submit();
+            }
+        }
+    }
+})
+
+function getUserByName(name: string, otros: boolean = false, cancelable: boolean = false) {
+    let usersList = document.getElementById("myDialogVisadores")?.querySelectorAll("table")[1].querySelector("tbody")?.querySelectorAll("tr")
+    if (usersList && usersList.length > 0) {
+        const users = Array.from(usersList)
+        let userFilered = users.filter(x => x.textContent?.toUpperCase().includes(name))[0]
+        if (userFilered) {
+            userFilered.children[1].getElementsByTagName("input")[0].click()
+            if (!otros) {
+                delayScript(100, () => {
+                    let aceptarUO = document.getElementById("myDialogVisadores")?.querySelector("form")?.querySelector("a")
+                    if (aceptarUO) aceptarUO.click()
+                })
+            }
+        } else if (!cancelable) {
+            const navigator = document.getElementById("myDialogVisadores")?.querySelectorAll("table")[1].parentElement?.parentElement?.getElementsByTagName("a")
+            if (navigator && navigator.length > 2) {
+                navigator[2].click()
+                delayScript(200, () => {
+                    getUserByName(name, otros, true)
+                    if (otros) {
+                        navigator[0].click()
+                    }
+                })
+            }
+        }
+    }
+}
+
+function showModal(message: string) {
+    const modalOverlay = document.createElement('div');
+    modalOverlay.style.position = 'fixed';
+    modalOverlay.style.top = '0';
+    modalOverlay.style.left = '0';
+    modalOverlay.style.width = '100%';
+    modalOverlay.style.height = '100%';
+    modalOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    modalOverlay.style.display = 'flex';
+    modalOverlay.style.justifyContent = 'center';
+    modalOverlay.style.alignItems = 'center';
+    modalOverlay.style.zIndex = '9999';
+
+    const modalContent = document.createElement('div');
+    modalContent.style.backgroundColor = '#000';
+    modalContent.style.color = '#fff';
+    modalContent.style.padding = '20px';
+    modalContent.style.borderRadius = '8px';
+    modalContent.style.width = '80%';
+    modalContent.style.maxWidth = '400px';
+    modalContent.style.textAlign = 'center';
+    modalContent.style.fontSize = '16px';
+    modalContent.style.fontWeight = 'bold';
+
+    function closeModal() {
+        modalOverlay.remove();
+    }
+    modalOverlay.addEventListener('click', function (event) {
+        if (event.target === modalOverlay) {
+            closeModal();
+        }
+    });
+    setTimeout(closeModal, 8000);
+
+    modalContent.textContent = message.toUpperCase();
+    modalOverlay.appendChild(modalContent);
+    document.body.appendChild(modalOverlay);
+}
+
+function delayScript(delay: number, callback: () => void) {
+    setTimeout(() => {
+        callback();
+    }, delay);
+}
