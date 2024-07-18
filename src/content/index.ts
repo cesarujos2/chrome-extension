@@ -166,7 +166,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                         cancelable: true,
                     }));
                 }
-                delayScript(300, () => {
+                delayScript(800, () => {
                     let checkUODestination = document.getElementById("dlgform_uo")?.querySelectorAll("table")[0].children[1].children[0].children[1].querySelector("span") as HTMLSpanElement
                     if (checkUODestination) {
                         checkUODestination.click()

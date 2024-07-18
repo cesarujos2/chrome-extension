@@ -1,5 +1,5 @@
-import { Request } from "../interfaces/frontData"
-import { getFitac, IFitac } from "../services/getFitac"
+import { IFitac, Request } from "../interfaces/frontData"
+import { TefiDB } from "../services/TefiDB"
 import { injectCurrentTab } from "./features/injectCurrentTab"
 import { injectForId } from "./features/injectForId"
 import { openNewTab } from "./features/openNewTab"
@@ -30,7 +30,8 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
     if (request.action === 'searchRoadMap') {
         storeData.roadmap = request.data.roadmap
         if (!storeData.options.onlySearch) {
-            const data = await getFitac(storeData.roadmap)
+            const Tefi = new TefiDB()
+            const data = await Tefi.getFitac(storeData.roadmap)
             storeData.data = data[0]
             
             chrome.runtime.sendMessage({ action: 'noResults', data: { finded: data.length == 0 } })
