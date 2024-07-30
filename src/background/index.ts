@@ -21,7 +21,8 @@ const storeData: FrontData = {
     options: {
         onlySearch: false,
         noDownload: false,
-        despachar: false
+        despachar: false,
+        copyDate: false,
     }
 }
 
@@ -32,15 +33,15 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         if (!storeData.options.onlySearch) {
             const Tefi = new TefiDB()
             const data = await Tefi.getFitac(storeData.roadmap)
-            storeData.data = data[0]
             
-            chrome.runtime.sendMessage({ action: 'noResults', data: { finded: data.length == 0 } })
+            chrome.runtime.sendMessage({ action: 'resultSearch', data: { noFinded: data.length == 0 } })
             if (data.length == 0) {
                 return
             }
+            storeData.data = data[0]
         } else{
             storeData.data.document_name = request.data.roadmap
-            chrome.runtime.sendMessage({ action: 'noResults', data: { finded: false } })
+            chrome.runtime.sendMessage({ action: 'resultSearch', data: { noFinded: false } })
         }
         chrome.tabs.query({ windowType: 'normal' }, function (tabs) {
             const stdOpened = tabs.filter(tab => {
@@ -66,6 +67,7 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         request.data.key == 'onlySearch' ? storeData.options.onlySearch = request.data.value : null
         request.data.key == 'noDownload' ? storeData.options.noDownload = request.data.value : null
         request.data.key == 'despachar' ? storeData.options.despachar = request.data.value : null
+        request.data.key == 'copyDate' ? storeData.options.copyDate = request.data.value : null
 
     }
     if (request.action === 'inCurrentTab') {
@@ -95,5 +97,6 @@ export interface FrontData {
         onlySearch: boolean;
         noDownload: boolean;
         despachar: boolean;
+        copyDate: boolean;
     }
 }

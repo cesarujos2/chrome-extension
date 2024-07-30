@@ -8,21 +8,26 @@ function InputRoadMap() {
   const [showError, setShowError] = useState(false);
   const [noData, setNoData] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [inputValue, setInputValue] = useState('');
 
   useEffect(() => {
     if (inputRef.current) {
+      inputRef.current.addEventListener('keydown', handleKeyDown, true)
       inputRef.current.focus()
+      setInputValue(localStorage.getItem('roadmapTyped') || '')
     }
-    document.addEventListener('keydown', handleKeyDown, true)
-
+    
     chrome.runtime.onMessage.addListener(function (request: Request) {
-      if (request.action === 'noResults') {
+      if (request.action === 'resultSearch') {
         setLoading(false)
-        if (request.data.finded) {
+        if (request.data.noFinded) {
           setNoData(true)
           setTimeout(() => {
             setNoData(false)
           }, 4000)
+        } else{
+          localStorage.setItem('roadmapTyped', '')
+          setInputValue('')
         }
       }
     }
@@ -39,7 +44,7 @@ function InputRoadMap() {
       const datosInput = inputRef.current.value.trim().split('-')
       if (datosInput.length == 3 && (datosInput[0].toUpperCase() == "E" || datosInput[0].toUpperCase() == "I") && datosInput[1].length == 6 && datosInput[2].length == 4) {
         setLoading(true)
-        sendMessage({ action: 'searchRoadMap', data: { roadmap: inputRef.current.value.trim() } })
+        sendMessage({ action: 'searchRoadMap', data: { roadmap: inputRef.current.value.trim().replace(/ /g, '') } })
       } else {
         setShowError(true)
         setTimeout(() => {
@@ -47,6 +52,11 @@ function InputRoadMap() {
         }, 4000)
       }
     }
+  }
+
+  const onChangeInputData = (value: string) => {
+    setInputValue(value)
+    localStorage.setItem('roadmapTyped', value)
   }
   return (
     <div className='w-full text-center'>
@@ -61,7 +71,7 @@ function InputRoadMap() {
         {noData && <p className='text-red-500 text-sm text-bold py-1'>¡Hoja de ruta no registrada en TEFI!</p>}
       </div>
       <div className="flex px-4 py-1 gap-2">
-        <Input ref={inputRef} type="text" placeholder="Ingresa la hoja de ruta" />
+        <Input value={inputValue} onValueChange={onChangeInputData} ref={inputRef} type="text" placeholder="Ingresa la hoja de ruta" />
         <Button variant="solid" color="primary" onClick={handleCLick}>Derivar</Button>
       </div>
     </div>

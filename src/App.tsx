@@ -7,7 +7,7 @@ import FormRedaction from './components/FormRedaction'
 
 function App() {
   useEffect(() => {
-    chargeOptionsFromStorage(['onlySearch', 'noDownload', 'despachar'])
+    chargeOptionsFromStorage(['onlySearch', 'noDownload', 'despachar', 'copyDate'])
   })
 
   const chargeOptionsFromStorage = (options: Array<string>) => {

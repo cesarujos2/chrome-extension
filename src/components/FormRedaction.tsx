@@ -12,11 +12,17 @@ function FormRedaction() {
 
   useEffect(() => {
     inputRef.current?.focus()
-  })
+    inputRef.current?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        handleCLick()
+      }
+    })
+  }, [])
 
   const handleCLick = async () => {
+    console.log("handleCLick")
     setLoading(true)
-    const response = await GeminiRun(textInput)
+    const response = await GeminiRun("Redacta una observación del siguiente problema: " + textInput)
     setTextGenerated(response)
     setLoading(false)
   }

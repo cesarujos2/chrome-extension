@@ -27,14 +27,12 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                 for (let i = 0; i < tableListHR.length; i++) {
                     if (tableListHR[i].children[7].textContent?.split("-")[0] == "E") {
                         tableListHR[i].querySelectorAll("a")[0].click();
-                        if (!request.data.options.onlySearch) {
-                            chrome.runtime.sendMessage({ action: "waiting", nextScript: "clickOnGenerateDocument" });
-                        }
+                        chrome.runtime.sendMessage({ action: "waiting", nextScript: "clickOnGenerateDocument" });
                         break
                     }
                 }
             }
-        } else if (!request.data.options.onlySearch) {
+        } else {
             chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "clickOnGenerateDocument" });
         }
     }
@@ -49,14 +47,18 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                 if (listaUl.children[i].textContent == "Generar doc. electronico") {
                     encontrado = true;
                     if (i > 3) {
-                        let liGenerarDoc = listaUl.children[i];
-                        const enlace = liGenerarDoc as HTMLAnchorElement;
-                        enlace.click()
-                        setTimeout(() => {
-                            let numAdmin = document.getElementById('frmSelecctNumeracion:btnNumAdm') as HTMLButtonElement
-                            numAdmin.click()
-                            chrome.runtime.sendMessage({ action: "waiting", nextScript: "removeResponsible" });
-                        }, 1000)
+                        if (!request.data.options.onlySearch) {
+                            let liGenerarDoc = listaUl.children[i];
+                            const enlace = liGenerarDoc as HTMLAnchorElement;
+                            enlace.click()
+                            setTimeout(() => {
+                                let numAdmin = document.getElementById('frmSelecctNumeracion:btnNumAdm') as HTMLButtonElement
+                                numAdmin.click()
+                                chrome.runtime.sendMessage({ action: "waiting", nextScript: "removeResponsible" });
+                            }, 1000)
+                        } else{
+                            copiarFecha()
+                        }
                     } else if (i <= 3) {
                         showModal("Ya fue derivado! ")
                     }
@@ -107,7 +109,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
         let openUO = document.getElementById("idproyectonuevo:seccionBuscarFirmante")?.querySelector("button")
         if (openUO) {
             openUO.click()
-            delayScript(500, () => {
+            delayScript(800, () => {
                 let inputUO = document.getElementById("myDialogUO")?.querySelectorAll("input")[1]
                 if (inputUO) {
                     inputUO.value = '26'
@@ -116,7 +118,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                         cancelable: true,
                     }));
                 }
-                delayScript(500, () => {
+                delayScript(900, () => {
                     let check26 = document.getElementById("myDialogUO")?.querySelector("table")?.querySelector("tbody")?.querySelector("tr")?.querySelector("input")
                     let aceptarUO = document.getElementById("myDialogUO")?.querySelector("form")?.querySelector("a")
                     let addFirm = document.getElementById("idproyectonuevo:seccionAddFirmante")?.querySelector("button")
@@ -236,7 +238,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
         if (form != null) {
             if (tipoExpediente == 'desestimiento') {
                 form.templateID.value = '85990911-ff40-4882-f0bc-5ddc0f8567da';
-            } else{
+            } else {
                 switch (statusId) {
                     case 'completa':
                     case 'incompleta':
@@ -329,4 +331,16 @@ function delayScript(delay: number, callback: () => void) {
     setTimeout(() => {
         callback();
     }, delay);
+}
+
+function copiarFecha() {
+    let divPrincipal = document.getElementById("formvistahojaderuta:tabview");
+    let datetoCopy = divPrincipal?.querySelectorAll("table")[1].querySelectorAll("tr")[0].querySelectorAll("td")[1].textContent?.trim().split(" ")[0]
+    if (!datetoCopy) return
+    copyText(datetoCopy)
+}
+
+function copyText(textToCopy: string){
+    navigator.clipboard.writeText(textToCopy);
+
 }
