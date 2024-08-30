@@ -80,7 +80,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
     if (request.action === 'typeOfDocument') {
         let typeDoc = document.getElementById("idproyectonuevo:iddocumentos_label") as HTMLLabelElement
         typeDoc.click()
-        let ofType = document.getElementById("idproyectonuevo:iddocumentos_14") as HTMLLIElement
+        let ofType = document.getElementById("idproyectonuevo:iddocumentos_2") as HTMLLIElement
         ofType.click()
         chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addSubject", data: { delay: 200 } });
     }
@@ -217,7 +217,9 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                                     document.getElementById("idproyectonuevo:seccionBotones")?.querySelector("button")?.click()
                                     if (!request.data.options.noDownload) {
                                         delayScript(500, () => {
-                                            chrome.runtime.sendMessage({ action: "openTefi", nextScript: "downloadFitac" });
+                                            showModal("...espera", 4000)
+                                            //chrome.runtime.sendMessage({ action: "openTefi", nextScript: "downloadFitac" });
+                                            chrome.runtime.sendMessage({ action: "getDocumentFitac" });
                                         })
                                     }
                                 })
@@ -228,6 +230,30 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                 })
             })
         })
+    }
+    if (request.action === "downloadFitacNew") {
+        console.log(request)
+        const base64 = request.data.base64;
+        const roadmap = request.data.roadmap;
+
+        const [header, data] = base64.split(',');
+        const mime = header.match(/:(.*?);/)[1];
+        const binaryString = atob(data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const blob = new Blob([bytes], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${roadmap}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        URL.revokeObjectURL(url);
     }
     if (request.action === 'downloadFitac') {
         const tipoExpediente = request.data.tipo_expediente
@@ -288,7 +314,7 @@ function getUserByName(name: string, otros: boolean = false, cancelable: boolean
     }
 }
 
-function showModal(message: string) {
+function showModal(message: string, timeClose = 8000) {
     const modalOverlay = document.createElement('div');
     modalOverlay.style.position = 'fixed';
     modalOverlay.style.top = '0';
@@ -320,7 +346,7 @@ function showModal(message: string) {
             closeModal();
         }
     });
-    setTimeout(closeModal, 8000);
+    setTimeout(closeModal, timeClose);
 
     modalContent.textContent = message.toUpperCase();
     modalOverlay.appendChild(modalContent);
@@ -340,7 +366,7 @@ function copiarFecha() {
     copyText(datetoCopy)
 }
 
-function copyText(textToCopy: string){
+function copyText(textToCopy: string) {
     navigator.clipboard.writeText(textToCopy);
 
 }

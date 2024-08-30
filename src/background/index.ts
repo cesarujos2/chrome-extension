@@ -1,5 +1,6 @@
 import { IFitac, Request } from "../interfaces/frontData"
 import { TefiDB } from "../services/TefiDB"
+import { blobToBase64 } from "./features/BlobToBase64"
 import { injectCurrentTab } from "./features/injectCurrentTab"
 import { injectForId } from "./features/injectForId"
 import { openNewTab } from "./features/openNewTab"
@@ -33,13 +34,13 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         if (!storeData.options.onlySearch) {
             const Tefi = new TefiDB()
             const data = await Tefi.getFitac(storeData.roadmap)
-            
+
             chrome.runtime.sendMessage({ action: 'resultSearch', data: { noFinded: data.length == 0 } })
             if (data.length == 0) {
                 return
             }
             storeData.data = data[0]
-        } else{
+        } else {
             storeData.data.document_name = request.data.roadmap
             chrome.runtime.sendMessage({ action: 'resultSearch', data: { noFinded: false } })
         }
@@ -84,6 +85,33 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
     }
     if (request.action === 'openTefi') {
         openNewTab(`https://dgprc.atm-erp.com/dgprc/index.php?module=Fitac_fitac&offset=1&stamp=1687286622051739500&return_module=Fitac_fitac&action=DetailView&record=${storeData.data.id}`, { action: request.nextScript ?? '', data: { ...storeData.data, options: storeData.options } })
+    }
+    if (request.action === "getDocumentFitac") {
+        const statusId = storeData.data.status_id
+        let idTemplate
+        switch (statusId) {
+            case 'completa':
+            case 'incompleta':
+                idTemplate = 'ed00bd5d-4f85-19af-a915-5dc2f57dcd32';
+                break;
+            case 'amerita_evap':
+                idTemplate = '73107e4c-c398-bc4f-eac3-5dc5a402e07f';
+                break;
+            case 'improcedente':
+                idTemplate = '1fbf8a11-9a56-7edb-af18-5de8291aaa7e';
+                break;
+            case 'duplicada':
+                idTemplate = '1a689f7a-1c89-6e2d-c4e4-5e0fd3489b8c';
+                break;
+            default:
+                idTemplate = null;
+        }
+        if (idTemplate) {
+            const Tefi = new TefiDB()
+            const blob = await Tefi.getPDF(storeData.data.id, idTemplate)
+            const base64 = await blobToBase64(blob);
+            injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, roadmap: storeData.roadmap } });
+        }
     }
 
 }

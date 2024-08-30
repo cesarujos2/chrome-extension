@@ -19,4 +19,22 @@ export class TefiDB {
             return [];
         }
     }
+
+    async getPDF(id: string, idTemplate: string) {
+
+        try {
+            const response: AxiosResponse<any> = await this.api.get("/pdf", {
+                params: {
+                    id: id,
+                    idTemplate: idTemplate
+                },
+                responseType: 'blob'
+            })
+            const blob = response.data
+            return blob
+
+        } catch (error) {
+            console.error("Error al obtener pdf:", error);
+        }
+    }
 }
