@@ -12,11 +12,29 @@ export class TefiDB {
 
     async getFitac(roadmap: string): Promise<any[]> {
         try {
-            const response: AxiosResponse<any> = await this.api.get(roadmap);
+            const response: AxiosResponse<any> = await this.api.get(`/fitac/${roadmap}`);
             return response.data ?? [];
         } catch (error) {
             console.error("Error al obtener datos:", error);
             return [];
+        }
+    }
+
+    async getPDF(id: string, idTemplate: string) {
+
+        try {
+            const response: AxiosResponse<any> = await this.api.get("/fitac/pdf", {
+                params: {
+                    id: id,
+                    idTemplate: idTemplate
+                },
+                responseType: 'blob'
+            })
+            const blob = response.data
+            return blob
+
+        } catch (error) {
+            console.error("Error al obtener pdf:", error);
         }
     }
 }

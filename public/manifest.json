@@ -6,6 +6,9 @@
     "permissions": ["tabs",
       "contextMenus",
       "clipboardWrite"],
+      "host_permissions": [
+        "<all_urls>"
+      ],
     "action": {
       "default_popup": "index.html",
       "default_icon": {
@@ -25,7 +28,7 @@
     "content_scripts": [
       {
         "matches": [
-          "https://std.mtc.gob.pe/*", "https://dgprc.atm-erp.com/dgprc/*"
+          "<all_urls>"
         ],
         "js": ["content.js"]
       }
