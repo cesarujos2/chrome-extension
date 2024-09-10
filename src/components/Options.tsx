@@ -3,6 +3,7 @@ import OptionsSwitch from './OptionSwitch'
 function Options() {
   return (
     <div className='px-4'>
+        <OptionsSwitch keyOption='onlyDownloadAnnex' label='Solamente descargar Anexo STD'/>
         <OptionsSwitch keyOption='onlySearch' label='Solamente buscar en STD'/>
         <OptionsSwitch keyOption='copyDate' label='Copiar fecha en STD'/>
         <OptionsSwitch keyOption='noDownload' label='No descargar documento'/>

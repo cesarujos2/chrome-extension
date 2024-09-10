@@ -1,4 +1,5 @@
 import { IFitac, Request } from "../interfaces/frontData"
+import { STD } from "../services/Std"
 import { TefiDB } from "../services/TefiDB"
 import { blobToBase64 } from "./features/BlobToBase64"
 import { injectCurrentTab } from "./features/injectCurrentTab"
@@ -24,6 +25,7 @@ const storeData: FrontData = {
         noDownload: false,
         despachar: false,
         copyDate: false,
+        onlyDownloadAnnex: false,
     }
 }
 
@@ -31,6 +33,15 @@ const storeData: FrontData = {
 chrome.runtime.onMessage.addListener(async function (request: Request) {
     if (request.action === 'searchRoadMap') {
         storeData.roadmap = request.data.roadmap
+        if(storeData.options.onlyDownloadAnnex){
+            const std = new STD()
+            const blob = await std.getPDF(storeData.roadmap)
+            const base64 = await blobToBase64(blob);
+            console.log(base64)
+            injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, roadmap: storeData.roadmap } });
+            chrome.runtime.sendMessage({ action: 'resultSearch', data: { noFinded: false } })
+            return 
+        }
         if (!storeData.options.onlySearch) {
             const Tefi = new TefiDB()
             const data = await Tefi.getFitac(storeData.roadmap)
@@ -69,6 +80,7 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         request.data.key == 'noDownload' ? storeData.options.noDownload = request.data.value : null
         request.data.key == 'despachar' ? storeData.options.despachar = request.data.value : null
         request.data.key == 'copyDate' ? storeData.options.copyDate = request.data.value : null
+        request.data.key == 'onlyDownloadAnnex' ? storeData.options.onlyDownloadAnnex = request.data.value : null
 
     }
     if (request.action === 'inCurrentTab') {
@@ -126,5 +138,6 @@ export interface FrontData {
         noDownload: boolean;
         despachar: boolean;
         copyDate: boolean;
+        onlyDownloadAnnex: boolean;
     }
 }
