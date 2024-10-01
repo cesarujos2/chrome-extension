@@ -1,6 +1,6 @@
 import { IFitac, Request } from "../interfaces/frontData"
 import { STD } from "../services/Std"
-import { TefiDB } from "../services/TefiDB"
+import { TefiDB } from "../services/tefiDB"
 import { blobToBase64 } from "./features/BlobToBase64"
 import { injectCurrentTab } from "./features/injectCurrentTab"
 import { injectForId } from "./features/injectForId"
@@ -33,14 +33,18 @@ const storeData: FrontData = {
 chrome.runtime.onMessage.addListener(async function (request: Request) {
     if (request.action === 'searchRoadMap') {
         storeData.roadmap = request.data.roadmap
-        if(storeData.options.onlyDownloadAnnex){
+        if (storeData.options.onlyDownloadAnnex) {
             const std = new STD()
             const blob = await std.getPDF(storeData.roadmap)
+            if (!blob) {
+                chrome.runtime.sendMessage({ action: 'resultSearch', data: { noFinded: true } })
+                return
+            }
             const base64 = await blobToBase64(blob);
             console.log(base64)
             injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, roadmap: storeData.roadmap } });
             chrome.runtime.sendMessage({ action: 'resultSearch', data: { noFinded: false } })
-            return 
+            return
         }
         if (!storeData.options.onlySearch) {
             const Tefi = new TefiDB()
@@ -121,8 +125,10 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         if (idTemplate) {
             const Tefi = new TefiDB()
             const blob = await Tefi.getPDF(storeData.data.id, idTemplate)
-            const base64 = await blobToBase64(blob);
-            injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, roadmap: storeData.roadmap } });
+            if (!blob) {
+                const base64 = await blobToBase64(blob);
+                injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, roadmap: storeData.roadmap } });
+            }
         }
     }
 

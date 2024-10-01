@@ -9,8 +9,12 @@ function InputRoadMap() {
   const [noData, setNoData] = useState(false);
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [isAnnex, setIsAnnex] = useState(false)
 
   useEffect(() => {
+      const optionStorage = localStorage.getItem("onlyDownloadAnnex") == 'true' ? true : false
+      setIsAnnex(optionStorage)
+
     if (inputRef.current) {
       inputRef.current.addEventListener('keydown', handleKeyDown, true)
       inputRef.current.focus()
@@ -72,7 +76,7 @@ function InputRoadMap() {
       </div>
       <div className="flex px-4 py-1 gap-2">
         <Input value={inputValue} onValueChange={onChangeInputData} ref={inputRef} type="text" placeholder="Ingresa la hoja de ruta" />
-        <Button variant="solid" color="primary" onClick={handleCLick}>Derivar</Button>
+        <Button variant="solid" color="primary" onClick={handleCLick}>{isAnnex? "Descargar" :"Derivar"}</Button>
       </div>
     </div>
   )
