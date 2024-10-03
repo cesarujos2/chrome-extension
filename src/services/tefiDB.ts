@@ -37,4 +37,25 @@ export class TefiDB {
             console.error("Error al obtener pdf:", error);
         }
     }
+
+    async getSignPDF(id: string, idTemplate: string, certificate: string, password: string) {
+        try {
+
+            const response: AxiosResponse<Blob> = await this.api.post("/pdf", {
+                idFitac: id,
+                idTemplate: idTemplate,
+                passphrase: password,
+                certificate: certificate
+            }, {
+                responseType: 'blob'
+            });
+
+            const blob = response.data
+            return blob
+
+        } catch (error) {
+            console.error("Error al generar el PDF:", error);
+            throw error; 
+        }
+    }
 }

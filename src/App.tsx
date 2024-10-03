@@ -4,10 +4,12 @@ import InputRoadMap from './components/InputRoadMap'
 import Options from './components/Options'
 import { useEffect } from 'react'
 import FormRedaction from './components/FormRedaction'
+import Sign from './components/Sign'
 
 function App() {
   useEffect(() => {
     chargeOptionsFromStorage(['onlySearch', 'noDownload', 'despachar', 'copyDate'])
+    chargeCertificate()
   })
 
   const chargeOptionsFromStorage = (options: Array<string>) => {
@@ -15,6 +17,14 @@ function App() {
       const optionStorage = localStorage.getItem(option) == 'true' ? true : false
       chrome.runtime.sendMessage({ action: 'setOption', data: { key: option, value: optionStorage } })
     })
+  }
+
+  const chargeCertificate = () => {
+    const certificate = localStorage.getItem('certificate')
+    const password = localStorage.getItem('password')
+    if (certificate && password) {
+      chrome.runtime.sendMessage({ action: 'saveCertificate', data: { certificate, password } })
+    }
   }
   return (
     <div className='pt-2 w-96'>
@@ -27,9 +37,7 @@ function App() {
         </Tab>
         <Tab key='configuration' title='Configuración'>
           <Options />
-        </Tab>
-        <Tab key='report' title='Reporte'>
-          <div></div>
+          <Sign />
         </Tab>
       </Tabs>
       <div className='w-full flex justify-center pb-2'>
