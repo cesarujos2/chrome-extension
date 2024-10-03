@@ -217,7 +217,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                                     document.getElementById("idproyectonuevo:seccionBotones")?.querySelector("button")?.click()
                                     if (!request.data.options.noDownload) {
                                         delayScript(500, () => {
-                                            showModal("...espera", 4000)
+                                            showModal("...espera", 8000)
                                             //chrome.runtime.sendMessage({ action: "openTefi", nextScript: "downloadFitac" });
                                             chrome.runtime.sendMessage({ action: "getDocumentFitac" });
                                         })

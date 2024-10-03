@@ -103,6 +103,8 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
     }
     if (request.action === "getDocumentFitac") {
         const statusId = storeData.data.status_id
+        const tipoExpediente = storeData.data.tipo_expediente_c
+
         let idTemplate
         switch (statusId) {
             case 'completa':
@@ -121,6 +123,11 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
             default:
                 idTemplate = null;
         }
+
+        if(tipoExpediente == "desestimiento"){
+            idTemplate = '85990911-ff40-4882-f0bc-5ddc0f8567da';
+        }
+
         if (idTemplate) {
             const Tefi = new TefiDB();
             let blob;
