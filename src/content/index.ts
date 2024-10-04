@@ -234,7 +234,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
     if (request.action === "downloadFitacNew") {
         console.log(request)
         const base64 = request.data.base64;
-        const roadmap = request.data.roadmap;
+        const fileName = request.data.fileName;
 
         const [header, data] = base64.split(',');
         const mime = header.match(/:(.*?);/)[1];
@@ -250,7 +250,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${roadmap}.pdf`;
+        link.download = `${fileName}.pdf`;
         document.body.appendChild(link);
         link.click();
         URL.revokeObjectURL(url);

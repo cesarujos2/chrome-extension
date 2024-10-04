@@ -5,6 +5,7 @@ import Options from './components/Options'
 import { useEffect } from 'react'
 import FormRedaction from './components/FormRedaction'
 import Sign from './components/Sign'
+import { crypter } from './libs/crypter'
 
 function App() {
   useEffect(() => {
@@ -19,10 +20,12 @@ function App() {
     })
   }
 
-  const chargeCertificate = () => {
+  const chargeCertificate = async () => {
     const certificate = localStorage.getItem('certificate')
-    const password = localStorage.getItem('password')
-    if (certificate && password) {
+    const passwordEncrypted = localStorage.getItem('password')
+    if (certificate && passwordEncrypted) {
+      const password = await crypter.decrypt(passwordEncrypted)
+      console.log(password)
       chrome.runtime.sendMessage({ action: 'saveCertificate', data: { certificate, password } })
     }
   }
@@ -37,6 +40,7 @@ function App() {
         </Tab>
         <Tab key='configuration' title='Configuración'>
           <Options />
+          <div className='mx-6 my-3 border-b-1 border-gray-500'></div>
           <Sign />
         </Tab>
       </Tabs>

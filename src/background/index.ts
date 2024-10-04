@@ -131,21 +131,24 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         if (idTemplate) {
             const Tefi = new TefiDB();
             let blob;
+            let suffixName
 
             try {
                 if (credentialData.password && credentialData.certificateFile) {
                     blob = await Tefi.getSignPDF(storeData.data.id, idTemplate, credentialData.certificateFile, credentialData.password);
+                    suffixName = "[F]"
                 } else {
-                    blob = await Tefi.getPDF(storeData.data.id, idTemplate);
+                    throw new Error("No tiene credenciales")
                 }
             } catch (error) {
                 console.error("Error al generar el PDF:", error);
                 blob = await Tefi.getPDF(storeData.data.id, idTemplate);
+                suffixName = "[No Firmado]"
             }
 
-            if (blob) {
+            if (blob && suffixName) {
                 const base64 = await blobToBase64(blob);
-                injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, roadmap: storeData.roadmap } });
+                injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, fileName: storeData.roadmap + suffixName } });
             } else {
                 console.error("No se pudo generar el blob para la conversión a base64.");
             }
