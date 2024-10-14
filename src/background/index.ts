@@ -1,5 +1,5 @@
 import { IFitac, Request } from "../interfaces/frontData"
-import { TefiDB } from "../services/TefiDB"
+import { TefiDB } from "../services/tefiDB"
 import { blobToBase64 } from "./features/BlobToBase64"
 import { injectCurrentTab } from "./features/injectCurrentTab"
 import { injectForId } from "./features/injectForId"
@@ -47,7 +47,7 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         chrome.tabs.query({ windowType: 'normal' }, function (tabs) {
             const stdOpened = tabs.filter(tab => {
                 if (tab.url) {
-                    return tab.url.includes('std.mtc.gob.pe')
+                    return tab.url.includes('https://std.mtc.gob.pe')
                 }
             })
 
