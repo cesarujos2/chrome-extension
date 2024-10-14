@@ -56,7 +56,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                                 numAdmin.click()
                                 chrome.runtime.sendMessage({ action: "waiting", nextScript: "removeResponsible" });
                             }, 1000)
-                        } else{
+                        } else {
                             copiarFecha()
                         }
                     } else if (i <= 3) {
@@ -138,7 +138,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                 delayScript(200, () => {
                     getUserByName(userSTD.value, true)
                     delayScript(300, () => {
-                        getUserByName('VICTOR ORLANDO')
+                        getUserByName(getBoss() ?? 'VICTOR ORLANDO')
                         delayScript(300, () => {
                             chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "mayNeedUODestination" });
                         })
@@ -146,7 +146,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                 })
             } else {
                 delayScript(200, () => {
-                    getUserByName('VICTOR ORLANDO');
+                    getUserByName(getBoss() ??'VICTOR ORLANDO');
                     delayScript(300, () => {
                         chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "mayNeedUODestination" });
                     })
@@ -217,7 +217,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                                     document.getElementById("idproyectonuevo:seccionBotones")?.querySelector("button")?.click()
                                     if (!request.data.options.noDownload) {
                                         delayScript(500, () => {
-                                            showModal("...espera", 4000)
+                                            showModal("...espera", 8000)
                                             //chrome.runtime.sendMessage({ action: "openTefi", nextScript: "downloadFitac" });
                                             chrome.runtime.sendMessage({ action: "getDocumentFitac" });
                                         })
@@ -234,7 +234,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
     if (request.action === "downloadFitacNew") {
         console.log(request)
         const base64 = request.data.base64;
-        const roadmap = request.data.roadmap;
+        const fileName = request.data.fileName;
 
         const [header, data] = base64.split(',');
         const mime = header.match(/:(.*?);/)[1];
@@ -250,7 +250,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${roadmap}.pdf`;
+        link.download = `${fileName}.pdf`;
         document.body.appendChild(link);
         link.click();
         URL.revokeObjectURL(url);
@@ -312,6 +312,32 @@ function getUserByName(name: string, otros: boolean = false, cancelable: boolean
             }
         }
     }
+}
+
+function getBoss(): string | null {
+    const bannerTop = document.getElementById("top");
+    if (!bannerTop) {
+        return null;
+    }
+
+    const textContent = bannerTop.textContent;
+    if (!textContent) {
+        return null;
+    }
+
+    const jefeKeyword = "Jefe(a):";
+    const startIndex = textContent.indexOf(jefeKeyword);
+    if (startIndex === -1) {
+        return null;
+    }
+
+    const endIndex = textContent.indexOf("\n", startIndex + jefeKeyword.length);
+    if (endIndex === -1) {
+        return null;
+    }
+
+    const jefe = textContent.substring(startIndex + jefeKeyword.length, endIndex).trim();
+    return jefe;
 }
 
 function showModal(message: string, timeClose = 8000) {

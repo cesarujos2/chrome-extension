@@ -27,6 +27,15 @@ const storeData: FrontData = {
     }
 }
 
+const credentialData: CredentialsData = {
+    password: null,
+    certificateFile: null
+}
+
+interface CredentialsData {
+    password: string | null;
+    certificateFile: string | null;
+}
 
 chrome.runtime.onMessage.addListener(async function (request: Request) {
     if (request.action === 'searchRoadMap') {
@@ -71,6 +80,12 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         request.data.key == 'copyDate' ? storeData.options.copyDate = request.data.value : null
 
     }
+
+    if (request.action === "saveCertificate") {
+        credentialData.password = request.data.password
+        credentialData.certificateFile = request.data.certificate
+    }
+
     if (request.action === 'inCurrentTab') {
         if (request.nextScript && request.nextScript.length > 0) {
             injectCurrentTab({ action: request.nextScript, data: { ...storeData.data, options: storeData.options } })
@@ -88,6 +103,8 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
     }
     if (request.action === "getDocumentFitac") {
         const statusId = storeData.data.status_id
+        const tipoExpediente = storeData.data.tipo_expediente_c
+
         let idTemplate
         switch (statusId) {
             case 'completa':
@@ -106,11 +123,35 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
             default:
                 idTemplate = null;
         }
+
+        if(tipoExpediente == "desestimiento"){
+            idTemplate = '85990911-ff40-4882-f0bc-5ddc0f8567da';
+        }
+
         if (idTemplate) {
-            const Tefi = new TefiDB()
-            const blob = await Tefi.getPDF(storeData.data.id, idTemplate)
-            const base64 = await blobToBase64(blob);
-            injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, roadmap: storeData.roadmap } });
+            const Tefi = new TefiDB();
+            let blob;
+            let suffixName
+
+            try {
+                if (credentialData.password && credentialData.certificateFile) {
+                    blob = await Tefi.getSignPDF(storeData.data.id, idTemplate, credentialData.certificateFile, credentialData.password);
+                    suffixName = "[F]"
+                } else {
+                    throw new Error("No tiene credenciales")
+                }
+            } catch (error) {
+                console.error("Error al generar el PDF:", error);
+                blob = await Tefi.getPDF(storeData.data.id, idTemplate);
+                suffixName = "[No Firmado]"
+            }
+
+            if (blob && suffixName) {
+                const base64 = await blobToBase64(blob);
+                injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, fileName: storeData.roadmap + suffixName } });
+            } else {
+                console.error("No se pudo generar el blob para la conversión a base64.");
+            }
         }
     }
 
