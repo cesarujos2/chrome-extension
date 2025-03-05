@@ -4,7 +4,6 @@ import InputRoadMap from './components/InputRoadMap'
 import Options from './components/Options'
 import { useEffect } from 'react'
 import FormRedaction from './components/FormRedaction'
-import Sign from './components/Sign'
 import { crypter } from './libs/crypter'
 
 function App() {
@@ -41,7 +40,6 @@ function App() {
         <Tab key='configuration' title='Configuración'>
           <Options />
           <div className='mx-6 my-3 border-b-1 border-gray-500'></div>
-          <Sign />
         </Tab>
       </Tabs>
       <div className='w-full flex justify-center pb-2'>

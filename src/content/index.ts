@@ -80,7 +80,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
     if (request.action === 'typeOfDocument') {
         let typeDoc = document.getElementById("idproyectonuevo:iddocumentos_label") as HTMLLabelElement
         typeDoc.click()
-        let ofType = document.getElementById("idproyectonuevo:iddocumentos_2") as HTMLLIElement
+        let ofType = document.getElementById("idproyectonuevo:iddocumentos_3") as HTMLLIElement
         ofType.click()
         chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addSubject", data: { delay: 200 } });
     }
@@ -91,9 +91,9 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
             asunto.textContent = `Solicitud de desistimiento de la Ficha Técnica para Proyectos de Infraestructura de Telecomunicaciones que NO están sujetos al Sistema Nacional de Evaluación de Impacto Ambiental (SEIA) del proyecto ${request.data.nameProyect}`
         } else {
             switch (request.data.status_id) {
-                case 'incompleta':
-                case 'completa':
-                case 'amerita_evap':
+                case 'aprobado':
+                case 'desaprobado':
+                case 'observado':
                     asunto.textContent = `Remite resultado de verificación de la Ficha Técnica Ambiental presentada para el proyecto de infraestructura de telecomunicaciones que no está sujeto al Sistema Nacional de Evaluación de Impacto Ambiental - SEIA`
                     break;
                 case 'duplicada':
@@ -132,31 +132,18 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
     if (request.action === 'addVisador') {
         document.getElementById("idproyectonuevo:seccionBotonesVisador")?.querySelectorAll("button")[1].click()
         delayScript(900, () => {
-            let userSTD = document.getElementById("idproyectonuevo:elaboradoPor") as HTMLInputElement
             document.getElementById("myDialogVisadores")?.querySelector("table")?.querySelector("tbody")?.querySelectorAll("tr")[1].querySelector("input")?.click()
-            if (!request.data.options.despachar) {
-                delayScript(200, () => {
-                    getUserByName(userSTD.value, true)
-                    delayScript(300, () => {
-                        getUserByName(getBoss() ?? 'VICTOR ORLANDO')
-                        delayScript(300, () => {
-                            chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "mayNeedUODestination" });
-                        })
-                    })
+            delayScript(200, () => {
+                getUserByName(getBoss() ?? 'VICTOR ORLANDO');
+                delayScript(300, () => {
+                    chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "mayNeedUODestination" });
                 })
-            } else {
-                delayScript(200, () => {
-                    getUserByName(getBoss() ??'VICTOR ORLANDO');
-                    delayScript(300, () => {
-                        chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "mayNeedUODestination" });
-                    })
-                })
-            }
+            })
         })
     }
 
     if (request.action === 'mayNeedUODestination') {
-        if (request.data.status_id == 'amerita_evap') {
+        if (request.data.status_id == 'desaprobado') {
             const buttonOpenDestination = document.getElementById("idproyectonuevo:seccionElegirDestinatarios")?.getElementsByTagName("button")[0] as HTMLButtonElement
             if (buttonOpenDestination) buttonOpenDestination.click()
             delayScript(500, () => {
@@ -217,9 +204,8 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                                     document.getElementById("idproyectonuevo:seccionBotones")?.querySelector("button")?.click()
                                     if (!request.data.options.noDownload) {
                                         delayScript(500, () => {
-                                            showModal("...espera", 8000)
-                                            //chrome.runtime.sendMessage({ action: "openTefi", nextScript: "downloadFitac" });
                                             chrome.runtime.sendMessage({ action: "getDocumentFitac" });
+                                            chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "generarDocumento", data: { delay: 800 } });
                                         })
                                     }
                                 })
@@ -231,8 +217,15 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
             })
         })
     }
+    if (request.action === 'generarDocumento') {
+        document.getElementById("idproyectonuevo:seccionBotones")?.querySelectorAll("button")[1]?.click();
+        delayScript(8000, () => {
+            document.getElementById("idproyectonuevo:linkShowUploadPdf");
+        })
+    }
+
     if (request.action === "downloadFitacNew") {
-        console.log(request)
+        showModal("Descargando documento...");
         const base64 = request.data.base64;
         const fileName = request.data.fileName;
 
@@ -254,35 +247,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
         document.body.appendChild(link);
         link.click();
         URL.revokeObjectURL(url);
-    }
-    if (request.action === 'downloadFitac') {
-        const tipoExpediente = request.data.tipo_expediente
-        const statusId = request.data.status_id
-
-        var form = document.getElementById('popupForm') as HTMLFormElement;
-
-        if (form != null) {
-            if (tipoExpediente == 'desestimiento') {
-                form.templateID.value = '85990911-ff40-4882-f0bc-5ddc0f8567da';
-            } else {
-                switch (statusId) {
-                    case 'completa':
-                    case 'incompleta':
-                        form.templateID.value = 'ed00bd5d-4f85-19af-a915-5dc2f57dcd32';
-                        break;
-                    case 'amerita_evap':
-                        form.templateID.value = '73107e4c-c398-bc4f-eac3-5dc5a402e07f';
-                        break;
-                    case 'improcedente':
-                        form.templateID.value = '1fbf8a11-9a56-7edb-af18-5de8291aaa7e';
-                        break;
-                    case 'duplicada':
-                        form.templateID.value = '1a689f7a-1c89-6e2d-c4e4-5e0fd3489b8c';
-                        break;
-                }
-                form.submit();
-            }
-        }
+        closeModal();
     }
 })
 
@@ -340,14 +305,18 @@ function getBoss(): string | null {
     return jefe;
 }
 
-function showModal(message: string, timeClose = 8000) {
-    const modalOverlay = document.createElement('div');
+let modalOverlay: HTMLDivElement | null = null;
+
+function showModal(message: string, timeClose?: number) {
+    if (modalOverlay) return; // Evita múltiples modales abiertos
+
+    modalOverlay = document.createElement('div');
     modalOverlay.style.position = 'fixed';
     modalOverlay.style.top = '0';
     modalOverlay.style.left = '0';
     modalOverlay.style.width = '100%';
     modalOverlay.style.height = '100%';
-    modalOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    modalOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
     modalOverlay.style.display = 'flex';
     modalOverlay.style.justifyContent = 'center';
     modalOverlay.style.alignItems = 'center';
@@ -364,19 +333,26 @@ function showModal(message: string, timeClose = 8000) {
     modalContent.style.fontSize = '16px';
     modalContent.style.fontWeight = 'bold';
 
-    function closeModal() {
-        modalOverlay.remove();
-    }
-    modalOverlay.addEventListener('click', function (event) {
+    modalContent.textContent = message.toUpperCase();
+    modalOverlay.appendChild(modalContent);
+    document.body.appendChild(modalOverlay);
+
+    modalOverlay.addEventListener('click', (event) => {
         if (event.target === modalOverlay) {
             closeModal();
         }
     });
-    setTimeout(closeModal, timeClose);
 
-    modalContent.textContent = message.toUpperCase();
-    modalOverlay.appendChild(modalContent);
-    document.body.appendChild(modalOverlay);
+    if (timeClose) {
+        setTimeout(closeModal, timeClose);
+    }
+}
+
+function closeModal() {
+    if (modalOverlay) {
+        modalOverlay.remove();
+        modalOverlay = null;
+    }
 }
 
 function delayScript(delay: number, callback: () => void) {
@@ -395,4 +371,31 @@ function copiarFecha() {
 function copyText(textToCopy: string) {
     navigator.clipboard.writeText(textToCopy);
 
+}
+
+function findElementWithRetry(
+    elementId: string, // El id del elemento a buscar
+    callback: (element: HTMLElement) => void, // El callback a ejecutar si se encuentra el elemento
+    maxRetries: number = 10, // Número máximo de intentos
+    interval: number = 500 // Intervalo entre intentos en milisegundos
+): void {
+    let attempts = 0;
+
+    const tryFindElement = () => {
+        const element = document.getElementById(elementId);
+
+        if (element) {
+            callback(element as HTMLElement);
+        } else {
+            attempts++;
+            if (attempts < maxRetries) {
+                console.log(`Intento ${attempts} de ${maxRetries} para encontrar el elemento con id ${elementId}.`);
+                setTimeout(tryFindElement, interval);
+            } else {
+                console.warn(`No se encontró el elemento con id ${elementId} después de ${maxRetries} intentos.`);
+            }
+        }
+    };
+
+    tryFindElement(); // Iniciamos la búsqueda
 }

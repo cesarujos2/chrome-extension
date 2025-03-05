@@ -22,19 +22,7 @@ const storeData: FrontData = {
     options: {
         onlySearch: false,
         noDownload: false,
-        despachar: false,
-        copyDate: false,
     }
-}
-
-const credentialData: CredentialsData = {
-    password: null,
-    certificateFile: null
-}
-
-interface CredentialsData {
-    password: string | null;
-    certificateFile: string | null;
 }
 
 chrome.runtime.onMessage.addListener(async function (request: Request) {
@@ -76,14 +64,6 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
     if (request.action === 'setOption') {
         request.data.key == 'onlySearch' ? storeData.options.onlySearch = request.data.value : null
         request.data.key == 'noDownload' ? storeData.options.noDownload = request.data.value : null
-        request.data.key == 'despachar' ? storeData.options.despachar = request.data.value : null
-        request.data.key == 'copyDate' ? storeData.options.copyDate = request.data.value : null
-
-    }
-
-    if (request.action === "saveCertificate") {
-        credentialData.password = request.data.password
-        credentialData.certificateFile = request.data.certificate
     }
 
     if (request.action === 'inCurrentTab') {
@@ -107,48 +87,36 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
 
         let idTemplate
         switch (statusId) {
-            case 'completa':
-            case 'incompleta':
-                idTemplate = 'ed00bd5d-4f85-19af-a915-5dc2f57dcd32';
+            case 'aprobado':
+            case 'desaprobado':
+            case 'improcedente':
+            case 'observado':
+            case 'duplicada':
+            case 'desestimiento':
+                idTemplate = '174608db-a59e-9244-d652-67980a6448f6';
                 break;
             case 'amerita_evap':
                 idTemplate = '73107e4c-c398-bc4f-eac3-5dc5a402e07f';
-                break;
-            case 'improcedente':
-                idTemplate = '1fbf8a11-9a56-7edb-af18-5de8291aaa7e';
-                break;
-            case 'duplicada':
-                idTemplate = '1a689f7a-1c89-6e2d-c4e4-5e0fd3489b8c';
                 break;
             default:
                 idTemplate = null;
         }
 
         if(tipoExpediente == "desestimiento"){
-            idTemplate = '85990911-ff40-4882-f0bc-5ddc0f8567da';
+            idTemplate = '174608db-a59e-9244-d652-67980a6448f6';
         }
 
         if (idTemplate) {
             const Tefi = new TefiDB();
             let blob;
-            let suffixName
-
-            try {
-                if (credentialData.password && credentialData.certificateFile) {
-                    blob = await Tefi.getSignPDF(storeData.data.id, idTemplate, credentialData.certificateFile, credentialData.password);
-                    suffixName = "[F]"
-                } else {
-                    throw new Error("No tiene credenciales")
-                }
-            } catch (error) {
-                console.error("Error al generar el PDF:", error);
+            try{
                 blob = await Tefi.getPDF(storeData.data.id, idTemplate);
-                suffixName = "[No Firmado]"
+            } catch (error) {
+                console.error("Error al obtener el documento Fitac.", error);
             }
-
-            if (blob && suffixName) {
+            if (blob) {
                 const base64 = await blobToBase64(blob);
-                injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, fileName: storeData.roadmap + suffixName } });
+                injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, fileName: storeData.roadmap } });
             } else {
                 console.error("No se pudo generar el blob para la conversión a base64.");
             }
@@ -165,7 +133,5 @@ export interface FrontData {
     options: {
         onlySearch: boolean;
         noDownload: boolean;
-        despachar: boolean;
-        copyDate: boolean;
     }
 }
