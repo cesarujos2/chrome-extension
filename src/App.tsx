@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import FormRedaction from './components/FormRedaction'
 import Sign from './components/Sign'
 import { crypter } from './libs/crypter'
+import { ThemeSwitch } from './components/core/theme-switch'
 
 function App() {
   useEffect(() => {
@@ -44,8 +45,9 @@ function App() {
           <Sign />
         </Tab>
       </Tabs>
-      <div className='w-full flex justify-center pb-2'>
+      <div className='w-full flex justify-center pb-2 items-center'>
         <p className="text-xs text-slate-600"> Copyright &#169; 2024 CU</p>
+        <span className='px-1'><ThemeSwitch /></span>
       </div>
     </div>
   )
