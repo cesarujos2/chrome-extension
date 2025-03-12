@@ -86,6 +86,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
     }
     if (request.action === 'addSubject') {
         let asunto = document.getElementById("idproyectonuevo:idAsCP") as HTMLTextAreaElement
+        document.getElementById("idproyectonuevo:btnDespachar")?.click()
         asunto.textContent = ''
         if (request.data.tipo_expediente_c == 'desestimiento') {
             asunto.textContent = `Solicitud de desistimiento de la Ficha Técnica para Proyectos de Infraestructura de Telecomunicaciones que NO están sujetos al Sistema Nacional de Evaluación de Impacto Ambiental (SEIA) del proyecto ${request.data.nameProyect}`
@@ -373,6 +374,7 @@ function copyText(textToCopy: string) {
 
 }
 
+// @ts-ignore
 function findElementWithRetry(
     elementId: string, // El id del elemento a buscar
     callback: (element: HTMLElement) => void, // El callback a ejecutar si se encuentra el elemento
