@@ -46,21 +46,17 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
             for (let i = 0; i < listaUl.children.length; i++) {
                 if (listaUl.children[i].textContent == "Generar doc. electronico") {
                     encontrado = true;
-                    if (i > 3) {
-                        if (!request.data.options.onlySearch) {
-                            let liGenerarDoc = listaUl.children[i];
-                            const enlace = liGenerarDoc as HTMLAnchorElement;
-                            enlace.click()
-                            setTimeout(() => {
-                                let numAdmin = document.getElementById('frmSelecctNumeracion:btnNumAdm') as HTMLButtonElement
-                                numAdmin.click()
-                                chrome.runtime.sendMessage({ action: "waiting", nextScript: "removeResponsible" });
-                            }, 1000)
-                        } else {
-                            copiarFecha()
-                        }
-                    } else if (i <= 3) {
-                        showModal("Ya fue derivado! ")
+                    if (!request.data.options.onlySearch) {
+                        let liGenerarDoc = listaUl.children[i];
+                        const enlace = liGenerarDoc as HTMLAnchorElement;
+                        enlace.click()
+                        setTimeout(() => {
+                            let numAdmin = document.getElementById('frmSelecctNumeracion:btnNumAdm') as HTMLButtonElement
+                            numAdmin.click()
+                            chrome.runtime.sendMessage({ action: "waiting", nextScript: "removeResponsible" });
+                        }, 1000)
+                    } else {
+                        copiarFecha()
                     }
                     break
                 }
@@ -80,8 +76,11 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
     if (request.action === 'typeOfDocument') {
         let typeDoc = document.getElementById("idproyectonuevo:iddocumentos_label") as HTMLLabelElement
         typeDoc.click()
-        let ofType = document.getElementById("idproyectonuevo:iddocumentos_3") as HTMLLIElement
+
+        const documentTypes = Array.from(document.getElementById("idproyectonuevo:iddocumentos_items")?.children || [])
+        let ofType = documentTypes.find((item) => item.textContent?.trim().toLowerCase() === "oficio") as HTMLLIElement
         ofType.click()
+
         chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addSubject", data: { delay: 200 } });
     }
     if (request.action === 'addSubject') {
@@ -220,9 +219,13 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
     }
     if (request.action === 'generarDocumento') {
         document.getElementById("idproyectonuevo:seccionBotones")?.querySelectorAll("button")[1]?.click();
-        delayScript(8000, () => {
-            document.getElementById("idproyectonuevo:linkShowUploadPdf");
-        })
+        findElementWithRetry("idproyectonuevo:linkShowUploadPdf", () => {
+            document.getElementById("idproyectonuevo:linkShowUploadPdf")?.click();
+        }, 15, 1000);
+    }
+
+    if (request.action === "modifyTable") {
+        modifyTable()
     }
 
     if (request.action === "downloadFitacNew") {
@@ -401,3 +404,113 @@ function findElementWithRetry(
 
     tryFindElement(); // Iniciamos la búsqueda
 }
+
+function modifyTable() {
+    const table = document.querySelector("table.list.view.table-responsive");
+
+    if (!table) {
+        console.log("No se encontró la tabla.");
+        return;
+    }
+
+    // Encuentra los encabezados de la tabla para identificar columnas
+    const headers = Array.from(table.querySelectorAll("th"));
+    const colIndex = {
+        documentName: headers.findIndex(th => th.textContent?.trim() === "Hoja de Ruta"),
+        nroInforme: headers.findIndex(th => th.textContent?.trim() === "N° Informe Resolutivo"),
+        nroOficio: headers.findIndex(th => th.textContent?.trim() === "N° Oficio Resolutivo"),
+    };
+
+    if (Object.values(colIndex).some(index => index === -1)) {
+        console.log("No se encontraron todas las columnas necesarias.");
+        return;
+    }
+
+    // Iterar sobre las filas de la tabla
+    table.querySelectorAll("tr").forEach(row => {
+        const cells = row.querySelectorAll("td");
+        if (cells.length < Math.max(...Object.values(colIndex))) return;
+
+        const documentName = cells[colIndex.documentName]?.innerText.trim();
+        const nroInforme = cells[colIndex.nroInforme]?.innerText.trim();
+        const nroOficio = cells[colIndex.nroOficio]?.innerText.trim();
+
+        if (!nroOficio && nroInforme) {
+            const button = document.createElement("button");
+            button.style.padding = "6px 12px";
+            button.style.cursor = "pointer";
+            button.style.border = "none";
+            button.style.borderRadius = "8px";
+            button.style.minWidth = "95px"
+            button.style.textAlign = "center";
+            button.style.color = "white";
+            button.style.fontSize = "14px";
+            button.style.fontWeight = "bold";
+            button.style.boxShadow = "0px 2px 4px rgba(0, 0, 0, 0.1)";
+            button.style.transition = "background-color 0.3s ease, transform 0.1s ease";
+
+            let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsGenerated") ?? [];
+            if (roadmapsGenerated.includes(documentName)) {
+                button.textContent = "Generado";
+                button.style.backgroundColor = "#9c2b1f";
+            } else {
+                button.textContent = "Generar";
+                button.style.backgroundColor = "#E56455";
+            }
+
+            button.onmouseover = () => {
+                button.style.filter = "brightness(90%)";
+            };
+
+            button.onmouseout = () => {
+                button.style.filter = "brightness(100%)";
+            };
+
+            button.onmousedown = () => {
+                button.style.transform = "scale(0.98)";
+            };
+
+            button.onmouseup = () => {
+                button.style.transform = "scale(1)";
+            };
+
+            button.onclick = (e: Event) => {
+                e.preventDefault();
+                showModal("Ejecutando...", 2000);
+                chrome.runtime.sendMessage({ action: 'searchRoadMap', data: { roadmap: documentName } });
+
+                button.style.backgroundColor = "#9c2b1f";
+                button.textContent = "Generado";
+
+                let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsGenerated") ?? [];
+                guardarEnLocalStorage("roadmapsGenerated", [...roadmapsGenerated, documentName]);
+            };
+
+
+            cells[colIndex.nroOficio].innerHTML = "";
+            cells[colIndex.nroOficio].appendChild(button);
+        }
+    });
+}
+
+function guardarEnLocalStorage<T>(clave: string, objeto: T): void {
+    try {
+        const objetoString = JSON.stringify(objeto);
+        localStorage.setItem(clave, objetoString);
+    } catch (error) {
+        console.error("Error al guardar en localStorage:", error);
+    }
+}
+
+function obtenerDeLocalStorage<T>(clave: string): T | null {
+    try {
+        const objetoString = localStorage.getItem(clave);
+        return objetoString ? JSON.parse(objetoString) : null;
+    } catch (error) {
+        console.error("Error al obtener datos de localStorage:", error);
+        return null;
+    }
+}
+
+
+chrome.runtime.sendMessage({ action: "waiting", nextScript: "modifyTable" });

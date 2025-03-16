@@ -52,7 +52,7 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
                 chrome.tabs.update(stdOpened[0].id, { active: true })
                 injectForId(stdOpened[0].id, { action: 'loadRoadMap', data: { ...storeData.data, options: storeData.options } })
             } else {
-                openNewTab('https://std.mtc.gob.pe/tramite/paginas/expediente.htm', { action: 'loadRoadMap', data: { ...storeData.data, options: storeData.options } })
+                openNewTab('https://std.mtc.gob.pe/tramite/', { action: 'loadRoadMap', data: { ...storeData.data, options: storeData.options } })
             }
         })
     }
