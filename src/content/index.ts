@@ -1,19 +1,26 @@
 import { Request } from "../interfaces/frontData";
 
-chrome.runtime.onMessage.addListener(function (request: Request) {
+chrome.runtime.onMessage.addListener(async function (request: Request) {
     if (request.action === 'loadRoadMap') {
         const fromLogin = document.getElementById('frmLogin') as HTMLFormElement
         if (!fromLogin) {
             const roadmap = request.data.document_name
             if (roadmap.length > 0) {
-                const inputHRSTD = document.getElementById('idformbusq:idhrbuscar') as HTMLInputElement
-                const buttonBuscarSTD = document.getElementById('idformbusq:btnBuscarHojaDeRuta')
-                const anio = document.getElementById('idformbusq:idanioexpediente_input') as HTMLInputElement
+                let inputHRSTD = document.getElementById('idformbusq:idhrbuscar') as HTMLInputElement
+                let buttonBuscarSTD = document.getElementById('idformbusq:btnBuscarHojaDeRuta')
+                let anio = document.getElementById('idformbusq:idanioexpediente_input') as HTMLInputElement
+                if (!inputHRSTD || !buttonBuscarSTD || !anio) {
+                    inputHRSTD = document.getElementById('header:formtitulo:idhrbuscar') as HTMLInputElement
+                    anio = document.getElementById('header:formtitulo:idanioexpediente_input') as HTMLInputElement
+                    buttonBuscarSTD = document.getElementById('header:formtitulo:btnBuscarHojaDeRuta') as HTMLButtonElement
+                }
                 if (inputHRSTD && buttonBuscarSTD && anio) {
                     inputHRSTD.value = roadmap.split("-")[1];
                     anio.value = roadmap.split("-")[2]
                     buttonBuscarSTD.click();
                     chrome.runtime.sendMessage({ action: "waiting", nextScript: "isRepeatRoadMap" });
+                } else {
+                    showModal("Error - Intentalo manualmente", 8000)
                 }
             }
         }
@@ -27,35 +34,17 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                 for (let i = 0; i < tableListHR.length; i++) {
                     if (tableListHR[i].children[7].textContent?.split("-")[0] == "E") {
                         tableListHR[i].querySelectorAll("a")[0].click();
-                        chrome.runtime.sendMessage({ action: "waiting", nextScript: "clickOnGenerateDocument" });
+                        if (!request.data.options.onlySearch) {
+                            chrome.runtime.sendMessage({ action: "waiting", nextScript: "clickOnGenerateDocument" });
+                        }
                         break
                     }
                 }
             }
         } else {
-            chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "isPosibleToDerive" });
-        }
-    }
-
-    if (request.action === 'isPosibleToDerive') {
-        const table = document.getElementById("formvistahojaderuta:tabview:movimientos")?.querySelector("table");
-
-        if (table) {
-            const rows = table.querySelectorAll("tr");
-
-            for (const row of rows) {
-                const cells = row.querySelectorAll("td");
-                if (cells.length > 0) {
-                    const lastCell = cells[cells.length - 1];
-                    if (lastCell?.textContent?.trim().toUpperCase() === "VISAR") {
-                        showModal("Ya ha sido derivado, ¿desea proceder a derivar igualmente?", 8000, () =>{
-                            chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "clickOnGenerateDocument" });
-                        })
-                        return;
-                    }
-                }
+            if(!request.data.options.onlySearch){
+                chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "clickOnGenerateDocument" });
             }
-            chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "clickOnGenerateDocument" });
         }
     }
 
@@ -66,23 +55,21 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
         if (listaUl) {
             let encontrado = false
             for (let i = 0; i < listaUl.children.length; i++) {
-                if (listaUl.children[i].textContent == "Generar doc. electronico") {
+                if (listaUl.children[i].textContent == "Generar doc. electronico" && i > 3) {
                     encontrado = true;
-                    if (!request.data.options.onlySearch) {
-                        let liGenerarDoc = listaUl.children[i];
-                        const enlace = liGenerarDoc as HTMLAnchorElement;
-                        enlace.click()
-                        setTimeout(() => {
-                            let numAdmin = document.getElementById('frmSelecctNumeracion:btnNumAdm') as HTMLButtonElement
-                            numAdmin.click()
-                            chrome.runtime.sendMessage({ action: "waiting", nextScript: "removeResponsible" });
-                        }, 1000)
-                    }
+                    let liGenerarDoc = listaUl.children[i];
+                    const enlace = liGenerarDoc as HTMLAnchorElement;
+                    enlace.click()
+                    setTimeout(() => {
+                        let numAdmin = document.getElementById('frmSelecctNumeracion:btnNumAdm') as HTMLButtonElement
+                        numAdmin.click()
+                        chrome.runtime.sendMessage({ action: "waiting", nextScript: "removeResponsible" });
+                    }, 1000)
                     break
                 }
             }
             if (!encontrado) {
-                showModal("No se puede derivar")
+                showModal("No se puede derivar", 8000)
             }
         }
     }
@@ -111,9 +98,9 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
             asunto.textContent = `Solicitud de desistimiento de la Ficha Técnica para Proyectos de Infraestructura de Telecomunicaciones que NO están sujetos al Sistema Nacional de Evaluación de Impacto Ambiental (SEIA) del proyecto ${request.data.nameProyect}`
         } else {
             switch (request.data.status_id) {
-                case 'aprobado':
-                case 'desaprobado':
-                case 'observado':
+                case 'incompleta':
+                case 'completa':
+                case 'amerita_evap':
                     asunto.textContent = `Remite resultado de verificación de la Ficha Técnica Ambiental presentada para el proyecto de infraestructura de telecomunicaciones que no está sujeto al Sistema Nacional de Evaluación de Impacto Ambiental - SEIA`
                     break;
                 case 'duplicada':
@@ -143,7 +130,7 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
                     let aceptarUO = document.getElementById("myDialogUO")?.querySelector("form")?.querySelector("a")
                     let addFirm = document.getElementById("idproyectonuevo:seccionAddFirmante")?.querySelector("button")
                     if (check26 && aceptarUO && addFirm) { check26.click(); aceptarUO.click(); addFirm.click() }
-                    chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addVisador", data: { delay: 200 } });
+                    chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "mayNeedUODestination", data: { delay: 200 } });
                 })
             })
         }
@@ -156,110 +143,107 @@ chrome.runtime.onMessage.addListener(function (request: Request) {
             delayScript(200, () => {
                 getUserByName(getBoss() ?? 'VICTOR ORLANDO');
                 delayScript(300, () => {
-                    chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "mayNeedUODestination" });
+                    chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "mayNeedUODestination", data: { delay: 200 } });
                 })
             })
         })
     }
 
     if (request.action === 'mayNeedUODestination') {
-        if (request.data.status_id == 'desaprobado') {
+        if (request.data.status_id == 'amerita_evap') {
             const buttonOpenDestination = document.getElementById("idproyectonuevo:seccionElegirDestinatarios")?.getElementsByTagName("button")[0] as HTMLButtonElement
             if (buttonOpenDestination) buttonOpenDestination.click()
-            delayScript(500, () => {
-                let inputUO = document.getElementById("dlgform_uo")?.querySelectorAll("input")[2]
-                if (inputUO) {
-                    inputUO.value = '29';
-                    inputUO.dispatchEvent(new Event('keyup', {
-                        bubbles: true,
-                        cancelable: true,
-                    }));
+            delayScript(1000, async () => {
+                const getRowUO = async (rowUODestination: HTMLTableRowElement, intentos: number = 0): Promise<HTMLTableRowElement> => {
+                    if (intentos > 100) throw new Error("No se encontró la UO destino después de varios intentos.");
+                    if (rowUODestination?.children[2]?.textContent?.trim() == '29') return rowUODestination;
+
+                    let inputUO = document.getElementById("dlgform_uo")?.querySelectorAll("input")[2]
+                    if (inputUO) {
+                        inputUO.value = '29';
+                        inputUO.dispatchEvent(new Event('keyup', {
+                            bubbles: true,
+                            cancelable: true,
+                        }));
+                    }
+
+                    return new Promise((resolve) => {
+                        setTimeout(() => {
+                            rowUODestination = document.getElementById("dlgform_uo")?.querySelectorAll("table")[0].children[1].children[0] as HTMLTableRowElement
+                            resolve(getRowUO(rowUODestination, intentos + 1));
+                        }, 1000);
+                    })
                 }
-                delayScript(800, async () => {
+                let rowUODestination = document.getElementById("dlgform_uo")?.querySelectorAll("table")[0].children[1].children[0] as HTMLTableRowElement
+                rowUODestination = await getRowUO(rowUODestination)
 
-                    const getRowUO = async (rowUODestination: HTMLTableRowElement, intentos: number = 0): Promise<HTMLTableRowElement> => {
-                        if (intentos > 10) throw new Error("No se encontró la UO destino después de varios intentos.");
-                        if (rowUODestination?.children[2]?.textContent?.trim() == '29') return rowUODestination;
-                        return new Promise((resolve) => {
-                            setTimeout(() => {
-                                rowUODestination = document.getElementById("dlgform_uo")?.querySelectorAll("table")[0].children[1].children[0] as HTMLTableRowElement
-                                resolve(getRowUO(rowUODestination, intentos + 1));
-                            }, 1000);
+                let checkUODestination = rowUODestination?.children[1].querySelector("span") as HTMLSpanElement
+
+                if (checkUODestination) {
+                    checkUODestination.click()
+                    await delayScript(200, async () => {
+                        document.getElementById("dlgform_uo")?.querySelectorAll("button")[0].click()
+                        await delayScript(200, async () => {
+                            chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "selectAdministered" });
                         })
-                    }
-                    let rowUODestination = document.getElementById("dlgform_uo")?.querySelectorAll("table")[0].children[1].children[0] as HTMLTableRowElement
-                    rowUODestination = await getRowUO(rowUODestination)
-
-                    let checkUODestination = rowUODestination?.children[1].querySelector("span") as HTMLSpanElement
-
-                    if (checkUODestination) {
-                        checkUODestination.click()
-                        delayScript(200, () => {
-                            document.getElementById("dlgform_uo")?.querySelectorAll("button")[0].click()
-                            delayScript(200, () => {
-                                chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "selectAdministered" });
-                            })
-                        })
-                    }
-                })
+                    })
+                }
             })
         } else {
-            chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "selectAdministered" });
+            chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "selectAdministered", data: { delay: 200 } });
         }
     }
 
     if (request.action === 'selectAdministered') {
         document.getElementById("idproyectonuevo:tipoUo_label")?.click()
-        delayScript(200, () => {
+        await delayScript(200, async () => {
             const itemsDestination = Array.from(document.getElementById("idproyectonuevo:tipoUo_panel")?.getElementsByTagName("li") ?? [])
 
             for (const item of itemsDestination) {
                 if (item.textContent?.includes('PERSONA JURIDICA')) {
                     item.click()
+                    await delayScript(300, async () => {
+                        const buttonOpenDestination = document.getElementById("idproyectonuevo:seccionElegirDestinatarios")?.getElementsByTagName("button")[0] as HTMLButtonElement
+                        if (buttonOpenDestination) buttonOpenDestination.click()
+                        await delayScript(800, async () => {
+                            const inputsJuridica = document.getElementById("dlg_ruc")?.querySelectorAll("input")
+                            const textareaJuridica = document.getElementById("dlg_ruc")?.querySelector("textarea")
+                            if (inputsJuridica && inputsJuridica[1] && inputsJuridica[7] && textareaJuridica) {
+                                inputsJuridica[1].value = request.data.nro_doc_identificacion_c;
+                                inputsJuridica[7].value = request.data.first_name + ' ' + request.data.last_name;
+                                textareaJuridica.textContent = `El administrado autorizó notificación vía correo electrónico a los siguientes correos: ${request.data.emails_concat}`;
+                                const buttons = document.getElementById("dlg_ruc")?.querySelectorAll("button")
+                                if (buttons && buttons[1] && buttons[0]) {
+                                    buttons[1].click()
+                                    await delayScript(1000, async () => {
+                                        buttons[0].click()
+                                        await delayScript(100, async () => {
+                                            document.getElementById("idproyectonuevo:seccionBotones")?.querySelector("button")?.click()
+                                            if (!request.data.options.noDownload) {
+                                                copyText(request.data.document_name)
+                                                await delayScript(500, async () => {
+                                                    chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "generarDocumento", data: { delay: 800 } });
+                                                })
+                                            }
+                                        })
+                                    })
+                                }
+                            }
+                        })
+                    })
                     break;
                 }
             }
-            delayScript(200, () => {
-                const buttonOpenDestination = document.getElementById("idproyectonuevo:seccionElegirDestinatarios")?.getElementsByTagName("button")[0] as HTMLButtonElement
-                if (buttonOpenDestination) buttonOpenDestination.click()
-                delayScript(500, () => {
-                    const inputsJuridica = document.getElementById("dlg_ruc")?.querySelectorAll("input")
-                    const textareaJuridica = document.getElementById("dlg_ruc")?.querySelector("textarea")
-                    if (inputsJuridica && inputsJuridica[1] && inputsJuridica[7] && textareaJuridica) {
-                        console.log(request.data)
-                        inputsJuridica[1].value = request.data.nro_doc_identificacion_c;
-                        inputsJuridica[7].value = request.data.first_name + ' ' + request.data.last_name;
-                        textareaJuridica.textContent = `El administrado autorizó notificación vía correo electrónico a los siguientes correos: ${request.data.emails_concat}`;
-                        const buttons = document.getElementById("dlg_ruc")?.querySelectorAll("button")
-                        if (buttons && buttons[1] && buttons[0]) {
-                            buttons[1].click()
-                            delayScript(1000, () => {
-                                buttons[0].click()
-                                delayScript(100, () => {
-                                    document.getElementById("idproyectonuevo:seccionBotones")?.querySelector("button")?.click()
-                                    if (!request.data.options.noDownload) {
-                                        delayScript(500, () => {
-                                            chrome.runtime.sendMessage({ action: "getDocumentFitac" });
-                                            chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "generarDocumento", data: { delay: 800 } });
-                                        })
-                                    }
-                                })
-                            })
-                        }
-
-                    }
-                })
-            })
         })
     }
     if (request.action === 'generarDocumento') {
         document.getElementById("idproyectonuevo:seccionBotones")?.querySelectorAll("button")[1]?.click();
-        findElementWithRetry("idproyectonuevo:linkShowUploadPdf", () => {
-            document.getElementById("idproyectonuevo:linkShowUploadPdf")?.click();
-            findElementWithRetry("idproyectonuevo:seccionDocFirmado", () => {
-                document.getElementById("idproyectonuevo:seccionBotones")?.querySelectorAll("button")[3]?.click()
-            }, 100, 1000);
-        }, 15, 1000);
+        const buttonLinkShowUploadPdf = await findElementWithRetry("idproyectonuevo:linkShowUploadPdf", 100, 1000)
+        buttonLinkShowUploadPdf?.click();
+
+        await findElementWithRetry("idproyectonuevo:seccionDocFirmado", 100, 1000)
+        document.getElementById("idproyectonuevo:seccionBotones")?.querySelectorAll("button")[3]?.click()
+
     }
 
     if (request.action === "modifyTable") {
@@ -379,7 +363,7 @@ function showModal(message: string, timeClose?: number, callback?: () => void) {
     modalContent.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
     modalContent.style.opacity = '0';
     modalContent.style.transform = 'scale(0.9)';
-    
+
     setTimeout(() => {
         modalContent.style.opacity = '1';
         modalContent.style.transform = 'scale(1)';
@@ -400,11 +384,11 @@ function showModal(message: string, timeClose?: number, callback?: () => void) {
         button.style.fontSize = '14px';
         button.style.fontWeight = 'bold';
         button.style.transition = 'background-color 0.3s ease, transform 0.1s ease';
-        
+
         button.onmouseover = () => {
             button.style.backgroundColor = '#4338CA';
         };
-        
+
         button.onmouseout = () => {
             button.style.backgroundColor = '#4F46E5';
         };
@@ -418,7 +402,7 @@ function showModal(message: string, timeClose?: number, callback?: () => void) {
         };
 
         button.addEventListener('click', () => {
-            closeModal(); 
+            closeModal();
             callback();
         });
 
@@ -453,51 +437,32 @@ async function delayScript(delay: number, callback: () => Promise<void> | void) 
     await callback();
 }
 
-function copiarFecha() {
-    let divPrincipal = document.getElementById("formvistahojaderuta:tabview");
-    let datetoCopy = divPrincipal?.querySelectorAll("table")[1].querySelectorAll("tr")[0].querySelectorAll("td")[1].textContent?.trim().split(" ")[0]
-    if (!datetoCopy) return
-    copyText(datetoCopy)
-}
 
 function copyText(textToCopy: string) {
     navigator.clipboard.writeText(textToCopy);
 
 }
 
-// @ts-ignore
-function findElementWithRetry(
-    elementId: string, // El id del elemento a buscar
-    callback: (element: HTMLElement) => void, // El callback a ejecutar si se encuentra el elemento
-    maxRetries: number = 10, // Número máximo de intentos
-    interval: number = 500 // Intervalo entre intentos en milisegundos
-): void {
-    let attempts = 0;
 
-    const tryFindElement = () => {
+async function findElementWithRetry(
+    elementId: string,       // El id del elemento a buscar
+    maxRetries: number = 10,   // Número máximo de intentos
+    interval: number = 500     // Intervalo entre intentos en milisegundos
+): Promise<HTMLElement> {
+    for (let attempts = 0; attempts < maxRetries; attempts++) {
         const element = document.getElementById(elementId);
-
         if (element) {
-            callback(element as HTMLElement);
-        } else {
-            attempts++;
-            if (attempts < maxRetries) {
-                console.log(`Intento ${attempts} de ${maxRetries} para encontrar el elemento con id ${elementId}.`);
-                setTimeout(tryFindElement, interval);
-            } else {
-                console.warn(`No se encontró el elemento con id ${elementId} después de ${maxRetries} intentos.`);
-            }
+            return element as HTMLElement;
         }
-    };
-
-    tryFindElement(); // Iniciamos la búsqueda
+        await new Promise((resolve) => setTimeout(resolve, interval));
+    }
+    throw new Error(`No se encontró el elemento con id ${elementId} después de ${maxRetries} intentos.`);
 }
 
 function modifyTable() {
     const table = document.querySelector("table.list.view.table-responsive");
 
     if (!table) {
-        console.log("No se encontró la tabla.");
         return;
     }
 
@@ -505,25 +470,24 @@ function modifyTable() {
     const headers = Array.from(table.querySelectorAll("th"));
     const colIndex = {
         documentName: headers.findIndex(th => th.textContent?.trim() === "Hoja de Ruta"),
-        nroInforme: headers.findIndex(th => th.textContent?.trim() === "N° Informe Resolutivo"),
         nroOficio: headers.findIndex(th => th.textContent?.trim() === "N° Oficio Resolutivo"),
     };
 
     if (Object.values(colIndex).some(index => index === -1)) {
-        console.log("No se encontraron todas las columnas necesarias.");
         return;
     }
 
+    const rows = table.querySelectorAll("tr");
     // Iterar sobre las filas de la tabla
-    table.querySelectorAll("tr").forEach(row => {
+    rows.forEach((row, index) => {
+        if (index < 2 || index == rows.length - 1 || index == rows.length - 2) return;
         const cells = row.querySelectorAll("td");
         if (cells.length < Math.max(...Object.values(colIndex))) return;
 
         const documentName = cells[colIndex.documentName]?.innerText.trim();
-        const nroInforme = cells[colIndex.nroInforme]?.innerText.trim();
         const nroOficio = cells[colIndex.nroOficio]?.innerText.trim();
 
-        if (!nroOficio && nroInforme) {
+        if (!nroOficio) {
             const button = document.createElement("button");
             button.style.padding = "6px 12px";
             button.style.cursor = "pointer";
