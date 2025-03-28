@@ -4,6 +4,7 @@
     "version": "2.0",
     "description": "Permite derivar una ficha en STD",
     "permissions": ["tabs",
+      "storage",
       "contextMenus",
       "clipboardWrite"],
     "action": {

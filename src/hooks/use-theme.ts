@@ -43,6 +43,7 @@ export const useTheme = (defaultTheme?: Theme) => {
     theme === ThemeProps.dark ? setLightTheme() : setDarkTheme();
 
   useEffect(() => {
+    chrome.runtime.sendMessage({ action: 'setTheme', data: { theme } });
     _setTheme(theme);
   });
 

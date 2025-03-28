@@ -25,7 +25,41 @@ const storeData: FrontData = {
     }
 }
 
+chrome.storage.local.get(['theme'], (theme) => {
+    if (!theme.theme) {
+        theme.theme = 'light'
+        chrome.storage.local.set(theme);
+    }
+});
+
 chrome.runtime.onMessage.addListener(async function (request: Request) {
+
+    if (request.action === 'setTheme') {
+        await chrome.storage.local.set({ theme: request.data.theme });
+    }
+
+    if (request.action === 'getTheme') {
+        chrome.storage.local.get(['theme'], (theme) => {
+
+            chrome.tabs.query({ windowType: 'normal' }, function (tabs) {
+                const tabsOpened = tabs.filter(tab => {
+                    if (tab.url) {
+                        return tab.url.includes('https://std.mtc.gob.pe') || tab.url.includes("https://dgprc.atm-erp.com")
+                    }
+                })
+                if (tabsOpened.length > 0) {
+                    tabsOpened.forEach(tab => {
+                        if (tab.id) {
+                            injectForId(tab.id, { action: "injectTheme", data: theme })
+                        }
+                    })
+                }
+            })
+
+
+        })
+    }
+
     if (request.action === 'searchRoadMap') {
         storeData.roadmap = request.data.roadmap
         if (!storeData.options.onlySearch) {
@@ -102,14 +136,14 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
                 idTemplate = null;
         }
 
-        if(tipoExpediente == "desestimiento"){
+        if (tipoExpediente == "desestimiento") {
             idTemplate = '174608db-a59e-9244-d652-67980a6448f6';
         }
 
         if (idTemplate) {
             const Tefi = new TefiDB();
             let blob;
-            try{
+            try {
                 blob = await Tefi.getPDF(storeData.data.id, idTemplate);
             } catch (error) {
                 console.error("Error al obtener el documento Fitac.", error);
