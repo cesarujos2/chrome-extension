@@ -152,13 +152,19 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         const dialogUO = await findElementWithRetry("#myDialogUO") as HTMLDivElement
         const inputUO = dialogUO?.querySelectorAll("input")[1] as HTMLInputElement
         const tableUO = dialogUO?.querySelector("table") as HTMLTableElement
-        if (!inputUO || !tableUO) { throw new Error("No se encontró el input de UO destino"); }
+        if (!inputUO || !tableUO) {
+            ModalOverlay.showModal("No se encontró el input de UO destino");
+            return;
+        }
 
         const rowUO = await getRowUO(inputUO, tableUO, '26');
         const checkUO = rowUO?.querySelector("input") as HTMLInputElement
         const aceptarUO = dialogUO?.querySelector("form")?.querySelector("a") as HTMLAnchorElement
         const addFirm = (await findElementWithRetry("#idproyectonuevo\\:seccionAddFirmante"))?.querySelector("button") as HTMLButtonElement
-        if (!checkUO || !aceptarUO || !addFirm) { throw new Error("No se encontró el check de UO destino"); }
+        if (!checkUO || !aceptarUO || !addFirm) {
+            ModalOverlay.showModal("No se encontró el check de UO destino");
+            return;
+        }
         checkUO.click()
         aceptarUO.click()
         addFirm.click()
@@ -168,18 +174,28 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
 
     if (request.action === 'addVisador') {
         const buttonVisador = await findElementWithRetry("#idproyectonuevo\\:seccionBotonesVisador")
-        if (!buttonVisador) { return; }
+        if (!buttonVisador) {
+            ModalOverlay.showModal("No se encontró el botón de visador");
+            return;
+        }
 
         buttonVisador.querySelectorAll("button")[1].click()
-        
+
         const dialogVisador = await findElementWithRetry("#myDialogVisadores") as HTMLDivElement
         const tableUOVisador = dialogVisador?.querySelector("table") as HTMLTableElement
-        const firstRowUOVisador = tableUOVisador?.querySelector("tbody")?.querySelectorAll("tr")[1] as HTMLTableRowElement
-        const checkSecondRowUOVisador = firstRowUOVisador?.querySelector("input") as HTMLInputElement
-        const aceptarVisador = dialogVisador?.querySelector("form")?.querySelector("a") as HTMLAnchorElement
-        if (!checkSecondRowUOVisador) { throw new Error("No se encontró el check de UO destino"); }
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        checkSecondRowUOVisador.click()
+        const inputUOVisador = dialogVisador?.querySelectorAll("input")[1] as HTMLInputElement
+        if (!inputUOVisador || !tableUOVisador) {
+            ModalOverlay.showModal("No se encontró el input de UO del visador");
+            return;
+        }
+
+        const rowUOVisador = await getRowUO(inputUOVisador, tableUOVisador, '26.01');
+        const checkUOVisador = rowUOVisador?.querySelector("input") as HTMLInputElement
+        if (!checkUOVisador) {
+            ModalOverlay.showModal("No se encontró el check de UO del visador");
+            return;
+        }
+        checkUOVisador.click()
 
         const bossName = getBoss() ?? 'VICTOR ORLANDO';
         const checkedVisador1 = await getUserByName(dialogVisador, bossName, 0, true);
@@ -187,6 +203,7 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
             ModalOverlay.showModal("No se encontró el usuario " + bossName, 5000);
             return;
         }
+        const aceptarVisador = dialogVisador?.querySelector("form")?.querySelector("a") as HTMLAnchorElement
         aceptarVisador.click()
 
         chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "mayNeedUODestination", data: { delay: 300 } });
@@ -195,19 +212,27 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
     if (request.action === 'mayNeedUODestination') {
         if (request.data.status_id == 'desaprobado') {
             const sectionSelectDestination = await findElementWithRetry("#idproyectonuevo\\:seccionElegirDestinatarios")
-            if (!sectionSelectDestination) { return; }
+            if (!sectionSelectDestination) { 
+                ModalOverlay.showModal("No se encontró la sección de elegir destinatarios");
+                return; 
+            }
             const buttonOpenDestination = sectionSelectDestination.querySelector("button") as HTMLButtonElement
             buttonOpenDestination.click()
 
             const dialogUO = await findElementWithRetry("#dialogo_uo") as HTMLDivElement
             const inputUO = dialogUO?.querySelectorAll("input")[2] as HTMLInputElement
             const tableUO = dialogUO?.querySelector("table") as HTMLTableElement
-            if (!inputUO || !tableUO) { throw new Error("No se encontró el input de UO destino"); }
-
+            if (!inputUO || !tableUO) { 
+                ModalOverlay.showModal("No se encontró el input de UO destino");
+                return; 
+             }
 
             const rowUO = await getRowUO(inputUO, tableUO, '29');
             const checkUO = rowUO?.querySelector("input") as HTMLInputElement
-            if (!checkUO) { throw new Error("No se encontró el check de UO destino"); }
+            if (!checkUO) { 
+                ModalOverlay.showModal("No se encontró el check de UO destino");
+                return; 
+             }
             checkUO.click()
             const aceptarUO = dialogUO?.querySelector("form")?.querySelectorAll("button")[0] as HTMLButtonElement
             aceptarUO.click()
