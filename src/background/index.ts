@@ -22,6 +22,7 @@ const storeData: FrontData = {
     options: {
         onlySearch: false,
         noDownload: false,
+        isOffice: false,
     }
 }
 
@@ -71,6 +72,7 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
                 return
             }
             storeData.data = data[0]
+            storeData.options.isOffice = request.data.isOffice === undefined || request.data.isOffice === null ? true : request.data.isOffice
         } else {
             storeData.data.document_name = request.data.roadmap
             chrome.runtime.sendMessage({ action: 'resultSearch', data: { noFinded: false } })
@@ -115,7 +117,7 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
     if (request.action === 'openTefi') {
         openNewTab(`https://dgprc.atm-erp.com/dgprc/index.php?module=Fitac_fitac&offset=1&stamp=1687286622051739500&return_module=Fitac_fitac&action=DetailView&record=${storeData.data.id}`, { action: request.nextScript ?? '', data: { ...storeData.data, options: storeData.options } })
     }
-    if (request.action === "getDocumentFitac") {
+    if (request.action === "getOfficeFitac") {
         const statusId = storeData.data.status_id
         const tipoExpediente = storeData.data.tipo_expediente_c
 
@@ -150,7 +152,50 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
             }
             if (blob) {
                 const base64 = await blobToBase64(blob);
-                injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, fileName: storeData.roadmap } });
+                injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, fileName: `${storeData.roadmap}_OFICIO` } });
+            } else {
+                console.error("No se pudo generar el blob para la conversión a base64.");
+            }
+        }
+    }
+
+    if (request.action === "getReportFitac") {
+        const statusId = storeData.data.status_id
+        const tipoExpediente = storeData.data.tipo_expediente_c
+        let idTemplate
+        switch (statusId) {
+            case 'aprobado':
+            case 'desaprobado':
+            case 'observado':
+            case 'duplicada':
+            case 'desestimiento':
+                idTemplate = 'b21dff8f-ca9c-833e-c896-67abc3e17777';
+                break;
+            case 'improcedente':
+                idTemplate = 'cfa2eb2b-54d2-ba81-97cc-67be1370cc6d';
+                break;
+            case 'amerita_evap':
+                idTemplate = '73107e4c-c398-bc4f-eac3-5dc5a402e07f';
+                break;
+            default:
+                idTemplate = null;
+        }
+
+        if (tipoExpediente == "desestimiento") {
+            idTemplate = '9a4f6d5a-51e6-4f11-06e1-67b511297224';
+        }
+
+        if (idTemplate) {
+            const Tefi = new TefiDB();
+            let blob;
+            try {
+                blob = await Tefi.getPDF(storeData.data.id, idTemplate);
+            } catch (error) {
+                console.error("Error al obtener el documento Fitac.", error);
+            }
+            if (blob) {
+                const base64 = await blobToBase64(blob);
+                injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, fileName: `${storeData.roadmap}_INFORME` } });
             } else {
                 console.error("No se pudo generar el blob para la conversión a base64.");
             }
@@ -167,5 +212,6 @@ export interface FrontData {
     options: {
         onlySearch: boolean;
         noDownload: boolean;
+        isOffice: boolean;
     }
 }

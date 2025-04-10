@@ -7,7 +7,7 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
     const commonBg: string = "#000";            // Fondo oscuro
     const commonHoverBg: string = "#121212";         // Fondo en hover (ligeramente más claro)
     const textColor: string = "#ffffff";             // Texto blanco
-    const hoverTextColor: string = "#4fc3f7";        // Color de acento (NextUI: azul claro)
+    const textColorHard: string = "#F08377"
     const transitionTime: string = "all 0.4s ease";
     const borderRadius: string = "8px";
 
@@ -32,7 +32,7 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
             bgColor = commonBg,
             bgColorHover = commonBg,
             color = textColor,
-            colorHover = hoverTextColor,
+            colorHover = textColorHard,
             border = "none",
             borderRadius: br = borderRadius
         } = config;
@@ -62,14 +62,13 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
             navElement.style.backdropFilter = "blur(10px)";
             navElement.style.height = "80px";
             navElement.style.maxHeight = "80px";
-            navElement.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.25)";
 
             navElement.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
                 setBg(button, {
                     bgColor: "transparent",
                     bgColorHover: "transparent",
                     color: textColor,
-                    colorHover: hoverTextColor
+                    colorHover: textColorHard
                 });
                 button.style.borderRadius = borderRadius;
             });
@@ -96,7 +95,8 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
             navElement.querySelectorAll<HTMLUListElement>("ul.dropdown-menu").forEach((ul) => {
                 ul.style.padding = "5px"
                 ul.style.backgroundColor = commonBg;
-                ul.style.boxShadow = "12px 12px 24px #0c0818, -12px -12px 24px #140e26";
+                ul.style.borderRadius = borderRadius;
+                ul.style.border = "0.5px solid rgb(36, 36, 36)";
             })
 
             const inputs = Array.from(navElement.querySelectorAll<HTMLInputElement>("input"));
@@ -116,12 +116,15 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
         #columnsFilterList .chooserContent .chooserList.red li {
         background-color: #41221f !important;
        }
+        #buttontoggle{
+            z-index: 999 !important;
+        }
 
        .modal-content {
         background-color: ${commonBg} !important;
         color: #ffffff !important;
         border-radius: 8px !important;
-        box-shadow: 12px 12px 24px #0c0818, -12px -12px 24px #140e26 !important;
+        border: 0.5px solid rgb(36, 36, 36) !important;
         padding: 20px !important;
         }
 
@@ -170,7 +173,10 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
 
        .tab-content input,
         .tab-content select,
-        .tab-content textarea {
+        .tab-content textarea,
+        table.tabform input,
+        table.tabform textarea,
+        table.tabform select {
             background-color: #232323 !important;
             color: #ffffff !important;
             border: 1px solid #333333 !important;
@@ -187,8 +193,7 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
     }
     
     table.list.view th {
-        background-color: ${commonHoverBg} !important;
-        color: #4fc3f7 !important;
+        background-color: ${commonBg} !important;
         padding: 10px !important;
         border: 0 !important;
         text-align: left !important;
@@ -198,14 +203,14 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
         padding: 10px !important;
         border: 0 !important;
         color: #ffffff !important;
-        background-color: #1f1f1f !important;
+        background-color: transparent !important;
         font-weight: 400 !important;
         font-size: 14px !important;
     }
     
-    table.list.view td a {
-        color: #fff !important;
-        font-weight: 400 !important;
+    table.list.view td.inlineEdit a {
+        color: ${textColorHard} !important;
+        font-weight: 500 !important;
         transition: all 0.3s ease !important;
         border-bottom-width: 0 !important;
         text-decoration: none !important;
@@ -216,14 +221,14 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
     }
     
     table.list.view tr {
-        background-color: ${commonHoverBg} !important;
+        background-color: ${commonBg} !important;
         border-bottom: 1px solid #333333 !important;
     }
     
     table.list.view tr:hover {
         background-color: #333333 !important;
     }
-            body {
+    body {
         background-color: ${commonBg} !important;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
     }
@@ -255,7 +260,7 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
     #sidebar_container .sidebar{
         background-color: ${commonBg} !important;
         padding-top: 20px !important;
-        box-shadow: 24px 24px 47px #0c0818, -24px -24px 47px #140e26 !important;
+        border: 0.5px solid rgb(36, 36, 36) !important;
         font-family: inherit !important;
         transition: all 0.3s ease-in-out;
     }
@@ -272,7 +277,7 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
        #sidebar_container .sidebar li:hover, 
        #sidebar_container .sidebar a:hover {
        background-color: ${commonHoverBg} !important;
-       color: ${hoverTextColor} !important;
+       color: ${textColorHard} !important;
        }
         #sidebar_container .sidebar li{
        font-family: inherit !important;
@@ -283,6 +288,17 @@ export async function customTefi(executionNumber: number = 0): Promise<void> {
     #buttontoggle{
         top: 92px !important;
     }
+    .inlineEdit.detail-view-field, .detail-view-field{
+           background-color: #232323!important;
+           color: #fff !important;
+    span#description_html{
+    width: 100% !important;
+    }
+    span#description_html * {
+    background-color: #232323 !important;
+    color: #fff !important;
+}
+
     `
     document.head.appendChild(styleElement);
 

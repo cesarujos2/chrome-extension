@@ -1,3 +1,3 @@
-export function copyText(textToCopy: string) {
-    navigator.clipboard.writeText(textToCopy);
+export async function copyText(textToCopy: string) {
+    await navigator.clipboard.writeText(textToCopy);
 }

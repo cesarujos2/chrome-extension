@@ -32,7 +32,7 @@ export class ModalOverlay {
     this.modalOverlay.style.backdropFilter = 'blur(6px)'; // Efecto de desenfoque
 
     // Creamos el contenido del modal
-    const modalContent = document.createElement('div');
+    const modalContent = document.createElement('form');
     modalContent.style.backgroundColor = '#1E1E2E'; // Color oscuro elegante
     modalContent.style.color = '#F8F8F2';
     modalContent.style.padding = '24px';
@@ -61,6 +61,7 @@ export class ModalOverlay {
     // Si se proporciona callback, se agrega un botón para aceptarlo
     if (callback) {
       const button = document.createElement('button');
+      button.type = 'submit';
       button.textContent = 'Aceptar';
       button.style.marginTop = '16px';
       button.style.padding = '10px 16px';
@@ -89,13 +90,22 @@ export class ModalOverlay {
         button.style.transform = 'scale(1)';
       };
 
-      button.addEventListener('click', () => {
+      button.onfocus = () => {
+        button.style.outline = 'none';
+      };
+
+      modalContent.addEventListener('submit', (e) => {
+        e.preventDefault();
         this.closeModal();
         callback();
       });
 
       modalContent.appendChild(document.createElement('br'));
       modalContent.appendChild(button);
+      
+      setTimeout(() => {
+        button.focus(); // Importante: después de agregarlo al DOM
+      }, 50);
     }
 
     this.modalOverlay.appendChild(modalContent);

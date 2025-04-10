@@ -6,6 +6,7 @@ import { getRowUO } from './features/getRowUO';
 import { getBoss } from './features/getBossSTD';
 import { getUserByName } from './features/getUserByName';
 import { customTefi } from './features/customTefi';
+import { addButtonFITAC } from './features/addButtonFITAC';
 
 chrome.runtime.onMessage.addListener(async function (request: Request) {
     if (request.action === 'loadRoadMap') {
@@ -61,7 +62,8 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
                 const cells = row.querySelectorAll("td");
                 if (cells.length > 0) {
                     const lastCell = cells[cells.length - 1];
-                    if (lastCell?.textContent?.trim().toUpperCase() === "VISAR") {
+                    if ((lastCell?.textContent?.trim().toUpperCase() === "VISAR" && request.data.options.isOffice) ||
+                        (lastCell?.textContent?.trim().toUpperCase() === "FIRMAR" && !request.data.options.isOffice)) {
                         ModalOverlay.showModal("Ya ha sido derivado, ¿desea proceder a derivar igualmente?", 8000, () => {
                             chrome.runtime.sendMessage({ action: "inCurrentTab", nextScript: "clickOnGenerateDocument" });
                         })
@@ -103,8 +105,10 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         }
     }
     if (request.action === 'removeResponsible') {
-        const tableSigners = await findElementWithRetry("#idproyectonuevo\\:idtabla_visadores_readonly_data") as any
-        tableSigners?.children[0].children[7].children[0].click()
+        if (request.data.options.isOffice) {
+            const tableSigners = await findElementWithRetry("#idproyectonuevo\\:idtabla_visadores_readonly_data") as any
+            tableSigners?.children[0].children[7].children[0].click()
+        }
         chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "typeOfDocument", data: { delay: 300 } });
     }
 
@@ -117,7 +121,8 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         });
         if (!documentTypes || !(Array.isArray(documentTypes) || (Array.isArray(documentTypes) && documentTypes.length == 0))) { return; }
 
-        let ofType = documentTypes.find((item) => item.textContent?.trim().toLowerCase() === "oficio") as HTMLLIElement
+        let ofType = documentTypes.find((item) => (item.textContent?.trim().toLowerCase() === "oficio" && request.data.options.isOffice) ||
+            (item.textContent?.trim().toLowerCase() === "informe" && !request.data.options.isOffice)) as HTMLLIElement
         ofType.click()
 
         chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addSubject", data: { delay: 300 } });
@@ -128,7 +133,7 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         asunto.textContent = ''
         if (request.data.tipo_expediente_c == 'desestimiento') {
             asunto.textContent = `Solicitud de desistimiento de la Ficha Técnica para Proyectos de Infraestructura de Telecomunicaciones que NO están sujetos al Sistema Nacional de Evaluación de Impacto Ambiental (SEIA) del proyecto ${request.data.nameProyect}`
-        } else {
+        } else if (request.data.options.isOffice) {
             switch (request.data.status_id) {
                 case 'aprobado':
                 case 'desaprobado':
@@ -140,8 +145,11 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
                     asunto.textContent = `Verificación de la Ficha Técnica presentada para el proyecto de Infraestructura de Telecomunicaciones denominado "${request.data.nameProyect}" que no está sujeto al Sistema Nacional de Evaluación de Impacto Ambiental (SEIA)`
                     break;
             }
+            chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addOrganicUnit", data: { delay: 300 } });
+        } else {
+            asunto.textContent = `Resultado de la evaluación de Ficha Técnica Ambiental del proyecto denominado ${request.data.nameProyect}.`
+            chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addFirmantes", data: { delay: 300 } });
         }
-        chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addOrganicUnit", data: { delay: 300 } });
     }
 
     if (request.action === 'addOrganicUnit') {
@@ -209,12 +217,81 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "mayNeedUODestination", data: { delay: 300 } });
     }
 
+    if (request.action === 'addFirmantes') {
+        const buttonVisador = await findElementWithRetry("#idproyectonuevo\\:seccionBotonesVisador")
+        if (!buttonVisador) {
+            ModalOverlay.showModal("No se encontró el botón de visador");
+            return;
+        }
+
+        buttonVisador.querySelectorAll("button")[2].click()
+
+        const dialogVisador = await findElementWithRetry("#myDialogVisadores") as HTMLDivElement
+        const tableUOVisador = dialogVisador?.querySelector("table") as HTMLTableElement
+        const inputUOVisador = dialogVisador?.querySelectorAll("input")[1] as HTMLInputElement
+        if (!inputUOVisador || !tableUOVisador) {
+            ModalOverlay.showModal("No se encontró el input de UO del firmante");
+            return;
+        }
+
+        const rowUOVisador = await getRowUO(inputUOVisador, tableUOVisador, '26.01');
+        const checkUOVisador = rowUOVisador?.querySelector("input") as HTMLInputElement
+        if (!checkUOVisador) {
+            ModalOverlay.showModal("No se encontró el check de UO del firmante");
+            return;
+        }
+        checkUOVisador.click()
+
+        const bossName = 'LUIS JESUS CARBAJAL MANCO';
+        const checkedVisador1 = await getUserByName(dialogVisador, bossName, 0, true);
+        if (!checkedVisador1) {
+            ModalOverlay.showModal("No se encontró el usuario " + bossName, 5000);
+            return;
+        }
+        const aceptarVisador = dialogVisador?.querySelector("form")?.querySelector("a") as HTMLAnchorElement
+        aceptarVisador.click()
+
+        chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "selectUODestinationInforme", data: { delay: 300 } });
+    }
+
+    if (request.action === 'selectUODestinationInforme') {
+        const sectionSelectDestination = await findElementWithRetry("#idproyectonuevo\\:seccionElegirDestinatarios")
+        if (!sectionSelectDestination) {
+            ModalOverlay.showModal("No se encontró la sección de elegir destinatarios");
+            return;
+        }
+        const buttonOpenDestination = sectionSelectDestination.querySelector("button") as HTMLButtonElement
+        buttonOpenDestination.click()
+
+        const dialogUO = await findElementWithRetry("#dialogo_uo") as HTMLDivElement
+        const inputUO = dialogUO?.querySelectorAll("input")[2] as HTMLInputElement
+        const tableUO = dialogUO?.querySelector("table") as HTMLTableElement
+        if (!inputUO || !tableUO) {
+            ModalOverlay.showModal("No se encontró el input de UO destino");
+            return;
+        }
+
+        const rowUO = await getRowUO(inputUO, tableUO, '26');
+        const checkUO = rowUO?.querySelector("input") as HTMLInputElement
+        if (!checkUO) {
+            ModalOverlay.showModal("No se encontró el check de UO destino");
+            return;
+        }
+        checkUO.click()
+        const aceptarUO = dialogUO?.querySelector("form")?.querySelectorAll("button")[0] as HTMLButtonElement
+        aceptarUO.click()
+        // if (!request.data.options.noDownload) {
+        //     chrome.runtime.sendMessage({ action: "getReportFitac" });
+        // }
+        chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "generarDocumento", data: { delay: 800 } });
+    }
+
     if (request.action === 'mayNeedUODestination') {
         if (request.data.status_id == 'desaprobado') {
             const sectionSelectDestination = await findElementWithRetry("#idproyectonuevo\\:seccionElegirDestinatarios")
-            if (!sectionSelectDestination) { 
+            if (!sectionSelectDestination) {
                 ModalOverlay.showModal("No se encontró la sección de elegir destinatarios");
-                return; 
+                return;
             }
             const buttonOpenDestination = sectionSelectDestination.querySelector("button") as HTMLButtonElement
             buttonOpenDestination.click()
@@ -222,17 +299,17 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
             const dialogUO = await findElementWithRetry("#dialogo_uo") as HTMLDivElement
             const inputUO = dialogUO?.querySelectorAll("input")[2] as HTMLInputElement
             const tableUO = dialogUO?.querySelector("table") as HTMLTableElement
-            if (!inputUO || !tableUO) { 
+            if (!inputUO || !tableUO) {
                 ModalOverlay.showModal("No se encontró el input de UO destino");
-                return; 
-             }
+                return;
+            }
 
             const rowUO = await getRowUO(inputUO, tableUO, '29');
             const checkUO = rowUO?.querySelector("input") as HTMLInputElement
-            if (!checkUO) { 
+            if (!checkUO) {
                 ModalOverlay.showModal("No se encontró el check de UO destino");
-                return; 
-             }
+                return;
+            }
             checkUO.click()
             const aceptarUO = dialogUO?.querySelector("form")?.querySelectorAll("button")[0] as HTMLButtonElement
             aceptarUO.click()
@@ -252,7 +329,7 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         buttons?.[0].click()
         if (!request.data.options.noDownload) {
-            chrome.runtime.sendMessage({ action: "getDocumentFitac" });
+            chrome.runtime.sendMessage({ action: "getOfficeFitac" });
         }
         chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "generarDocumento", data: { delay: 800 } });
 
@@ -326,4 +403,5 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
 
 
 modifyTable();
+addButtonFITAC();
 chrome.runtime.sendMessage({ action: "getTheme" })

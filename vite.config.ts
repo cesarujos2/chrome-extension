@@ -14,7 +14,8 @@ export default defineConfig({
         content: './src/content/index.ts',
       },
       output: {
-        entryFileNames: '[name].js'
+        entryFileNames: '[name].js',
+        manualChunks: undefined,
       }
     }
   },
