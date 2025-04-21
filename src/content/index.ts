@@ -144,6 +144,8 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
                 case 'improcedente':
                     asunto.textContent = `Verificación de la Ficha Técnica presentada para el proyecto de Infraestructura de Telecomunicaciones denominado "${request.data.nameProyect}" que no está sujeto al Sistema Nacional de Evaluación de Impacto Ambiental (SEIA)`
                     break;
+                default:
+                    asunto.textContent = `Remite resultado de verificación de la Ficha Técnica Ambiental presentada para el proyecto de infraestructura de telecomunicaciones que no está sujeto al Sistema Nacional de Evaluación de Impacto Ambiental - SEIA.`
             }
             chrome.runtime.sendMessage({ action: "inCurrentTabWithDelay", nextScript: "addOrganicUnit", data: { delay: 300 } });
         } else {
@@ -405,3 +407,20 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
 modifyTable();
 addButtonFITAC();
 chrome.runtime.sendMessage({ action: "getTheme" })
+
+
+const observer = new MutationObserver(() => {
+    console.log("MutationObserver triggered");
+    const sweetAlert = document.querySelector(".sweet-alert.showSweetAlert.visible") as HTMLDivElement;
+    const sweetOverlay = document.querySelector(".sweet-overlay") as HTMLDivElement;
+
+    if (sweetAlert && sweetOverlay) {
+        sweetAlert.style.display = "none";
+        sweetOverlay.style.display = "none";
+    }
+});
+
+const config = { childList: true, subtree: true };
+observer.observe(document.body, config);
+
+
