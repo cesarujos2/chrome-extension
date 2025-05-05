@@ -1,3 +1,4 @@
+import { createRequest } from "../utils/createRequestContent";
 import { copyText } from "./copyText";
 import { guardarEnLocalStorage, obtenerDeLocalStorage } from "./localStorageHandler";
 import { ModalOverlay } from "./ModalOverlay";
@@ -26,7 +27,8 @@ export function modifyTable() {
     }
 
     // Iterar sobre las filas de la tabla
-    table.querySelectorAll("tr").forEach(row => {
+    const tbody = table.querySelector(':scope > tbody')
+    tbody?.querySelectorAll("tr").forEach(row => {
         const cells = row.querySelectorAll("td");
         if (cells.length != headers.length) return;
 
@@ -80,7 +82,13 @@ export function modifyTable() {
                 e.preventDefault();
                 ModalOverlay.showModal("Ejecutando Generación de Informe...");
                 await copyText(documentName);
-                chrome.runtime.sendMessage({ action: 'searchRoadMap', data: { roadmap: documentName, isOffice: false } });
+
+                //Buscar oficio
+                const request = createRequest()
+                request.action = "searchRoadMap"
+                request.content.fitacData.document_name = documentName
+                request.content.isOffice = false
+                chrome.runtime.sendMessage(request);
 
                 button.style.backgroundColor = "#3f3f46";
                 button.style.color = "#fff";
@@ -140,7 +148,12 @@ export function modifyTable() {
                 e.preventDefault();
                 ModalOverlay.showModal("Ejecutando generación de Oficio...");
                 await copyText(documentName)
-                chrome.runtime.sendMessage({ action: 'searchRoadMap', data: { roadmap: documentName, isOffice: true } });
+
+                const request = createRequest()
+                request.action = "searchRoadMap"
+                request.content.fitacData.document_name = documentName
+                request.content.isOffice = true
+                chrome.runtime.sendMessage(request);
 
                 button.style.backgroundColor = "#3f3f46";
                 button.style.color = "#fff";

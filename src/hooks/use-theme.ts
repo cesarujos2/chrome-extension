@@ -1,6 +1,8 @@
 // originally written by @imoaazahmed
 
 import { useEffect, useMemo, useState } from "react";
+import { IRequest } from "../models/IRequest";
+import { createRequest } from "../utils/createRequestPopUp";
 
 const ThemeProps = {
   key: "theme",
@@ -43,7 +45,10 @@ export const useTheme = (defaultTheme?: Theme) => {
     theme === ThemeProps.dark ? setLightTheme() : setDarkTheme();
 
   useEffect(() => {
-    chrome.runtime.sendMessage({ action: 'setTheme', data: { theme } });
+    const request: IRequest = createRequest()
+    request.config.theme = theme
+    request.action = "setConfig"
+    chrome.runtime.sendMessage(request);
     _setTheme(theme);
   });
 

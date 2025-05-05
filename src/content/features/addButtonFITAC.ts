@@ -1,3 +1,4 @@
+import { createRequest } from "../utils/createRequestContent";
 import { guardarEnLocalStorage, obtenerDeLocalStorage } from "./localStorageHandler";
 import { ModalOverlay } from "./ModalOverlay";
 
@@ -51,7 +52,12 @@ export function addButtonFITAC() {
         button.onclick = (e: Event) => {
             e.preventDefault();
             ModalOverlay.showModal("Ejecutando...");
-            chrome.runtime.sendMessage({ action: "searchRoadMap", data: { roadmap: documentName, isOffice } });
+
+            // Enviar mensaje al background script
+            const request = createRequest()
+            request.content.fitacData.document_name = documentName;
+            request.content.isOffice = isOffice;
+            chrome.runtime.sendMessage(request);
 
             button.style.backgroundColor = "#3f3f46";
             button.textContent = `Generado ${text}`;
@@ -61,12 +67,6 @@ export function addButtonFITAC() {
         return button;
     };
 
-    // Inprimir todos los valores
-    console.log("documentName:", documentName);
-    console.log("statusId:", statusId);
-    console.log("nroInforme:", nroInforme);
-    console.log("nroOficio:", nroOficio);
-    
 
     // Agregar botones si se cumplen las condiciones
     if (statusId !== "" && statusId !== "por_evaluar" && nroOficio == "" && nroInforme == "") {

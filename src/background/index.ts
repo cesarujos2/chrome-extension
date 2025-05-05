@@ -1,47 +1,26 @@
-import { IFitac, Request } from "../interfaces/frontData"
 import { TefiDB } from "../services/tefiDB"
 import { blobToBase64 } from "./features/BlobToBase64"
 import { injectCurrentTab } from "./features/injectCurrentTab"
 import { injectForId } from "./features/injectForId"
 import { openNewTab } from "./features/openNewTab"
 import { waiting } from "./features/waiting"
+import { IRequest } from "../models/IRequest"
+import { createRequest } from "./utils/createRequestBackground"
 
-const storeData: FrontData = {
-    roadmap: '',
-    data: {
-        document_name: '',
-        id: '',
-        status_id: '',
-        tipo_expediente_c: '',
-        nro_doc_identificacion_c: '',
-        emails_concat: '',
-        nameProyect: '',
-        first_name: '',
-        last_name: '',
-    },
-    options: {
-        onlySearch: false,
-        noDownload: false,
-        isOffice: false,
-    }
-}
 
-chrome.storage.local.get(['theme'], (theme) => {
-    if (!theme.theme) {
-        theme.theme = 'light'
-        chrome.storage.local.set(theme);
-    }
-});
+setInitialConfigInStorage();
 
-chrome.runtime.onMessage.addListener(async function (request: Request) {
+chrome.runtime.onMessage.addListener(async function (request: IRequest) {
 
-    if (request.action === 'setTheme') {
-        await chrome.storage.local.set({ theme: request.data.theme });
+    if (request.action === 'setConfig') {
+        console.log(request.config)
+        await setConfigInStorage(request.config);
     }
 
     if (request.action === 'getTheme') {
-        chrome.storage.local.get(['theme'], (theme) => {
-
+        const config = await getConfigFromStorage()
+        const theme = config?.theme
+        if (theme && typeof (theme) == 'string') {
             chrome.tabs.query({ windowType: 'normal' }, function (tabs) {
                 const tabsOpened = tabs.filter(tab => {
                     if (tab.url) {
@@ -51,32 +30,26 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
                 if (tabsOpened.length > 0) {
                     tabsOpened.forEach(tab => {
                         if (tab.id) {
-                            injectForId(tab.id, { action: "injectTheme", data: theme })
+                            request.action = "injectTheme"
+                            request.config.theme = theme
+                            injectForId(tab.id, request)
                         }
                     })
                 }
             })
-
-
-        })
+        }
     }
 
     if (request.action === 'searchRoadMap') {
-        storeData.roadmap = request.data.roadmap
-        if (!storeData.options.onlySearch) {
-            const Tefi = new TefiDB()
-            const data = await Tefi.getFitac(storeData.roadmap)
+        const config = await getConfigFromStorage()
+        const roadmap = request.content.fitacData.document_name
+        if (!roadmap) { return }
+        const data = await TefiDB.getFitac(roadmap)
+        if (data.length == 0) { return }
+        request.content.fitacData = data[0]
+        request.content.isOffice = request.content.isOffice
+        request.config = config
 
-            chrome.runtime.sendMessage({ action: 'resultSearch', data: { noFinded: data.length == 0 } })
-            if (data.length == 0) {
-                return
-            }
-            storeData.data = data[0]
-            storeData.options.isOffice = request.data.isOffice === undefined || request.data.isOffice === null ? true : request.data.isOffice
-        } else {
-            storeData.data.document_name = request.data.roadmap
-            chrome.runtime.sendMessage({ action: 'resultSearch', data: { noFinded: false } })
-        }
         chrome.tabs.query({ windowType: 'normal' }, function (tabs) {
             const stdOpened = tabs.filter(tab => {
                 if (tab.url) {
@@ -84,42 +57,42 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
                 }
             })
 
+            request.action = "loadRoadMap"
             if (stdOpened.length > 0 && stdOpened[0].id) {
                 chrome.tabs.update(stdOpened[0].id, { active: true })
-                injectForId(stdOpened[0].id, { action: 'loadRoadMap', data: { ...storeData.data, options: storeData.options } })
+                injectForId(stdOpened[0].id, request)
             } else {
-                openNewTab('https://std.mtc.gob.pe/tramite/', { action: 'loadRoadMap', data: { ...storeData.data, options: storeData.options } })
+                openNewTab('https://std.mtc.gob.pe/tramite/', request)
             }
         })
     }
     if (request.action === 'waiting') {
         if (request.nextScript && request.nextScript.length > 0) {
-            waiting({ action: request.nextScript, data: { ...storeData.data, options: storeData.options } })
+            request.action = request.nextScript
+            waiting(request)
         }
-    }
-    if (request.action === 'setOption') {
-        request.data.key == 'onlySearch' ? storeData.options.onlySearch = request.data.value : null
-        request.data.key == 'noDownload' ? storeData.options.noDownload = request.data.value : null
     }
 
     if (request.action === 'inCurrentTab') {
         if (request.nextScript && request.nextScript.length > 0) {
-            injectCurrentTab({ action: request.nextScript, data: { ...storeData.data, options: storeData.options } })
+            request.action = request.nextScript
+            injectCurrentTab(request)
         }
     }
     if (request.action === 'inCurrentTabWithDelay') {
         setTimeout(() => {
             if (request.nextScript && request.nextScript.length > 0) {
-                injectCurrentTab({ action: request.nextScript, data: { ...storeData.data, options: storeData.options } })
+                request.action = request.nextScript
+                injectCurrentTab(request)
             }
-        }, request.data.delay)
+        }, request.delay)
     }
     if (request.action === 'openTefi') {
-        openNewTab(`https://dgprc.atm-erp.com/dgprc/index.php?module=Fitac_fitac&offset=1&stamp=1687286622051739500&return_module=Fitac_fitac&action=DetailView&record=${storeData.data.id}`, { action: request.nextScript ?? '', data: { ...storeData.data, options: storeData.options } })
+        openNewTab(`https://dgprc.atm-erp.com/dgprc/index.php?module=Fitac_fitac&offset=1&stamp=1687286622051739500&return_module=Fitac_fitac&action=DetailView&record=${request.content.fitacData.id}`, request)
     }
     if (request.action === "getOfficeFitac") {
-        const statusId = storeData.data.status_id
-        const tipoExpediente = storeData.data.tipo_expediente_c
+        const statusId = request.content.fitacData.status_id
+        const tipoExpediente = request.content.fitacData.tipo_expediente_c
 
         let idTemplate
         switch (statusId) {
@@ -143,25 +116,37 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
         }
 
         if (idTemplate) {
-            const Tefi = new TefiDB();
             let blob;
             try {
-                blob = await Tefi.getPDF(storeData.data.id, idTemplate);
+                if (request.content.fitacData.id) {
+                    blob = await TefiDB.getPDF(request.content.fitacData.id, idTemplate);
+                }
             } catch (error) {
                 console.error("Error al obtener el documento Fitac.", error);
             }
             if (blob) {
                 const base64 = await blobToBase64(blob);
-                injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, fileName: `${storeData.roadmap}_OFICIO` } });
+                if (!base64) {
+                    console.error("Error al convertir el blob a base64.");
+                    return;
+                }
+                request.content.docBase64 = base64.toString()
+                request.action = "downloadFitacNew";
+                request.content.fileName = `${request.content.fitacData.document_name}_OFICIO`;
+                injectCurrentTab(request);
             } else {
                 console.error("No se pudo generar el blob para la conversión a base64.");
             }
         }
     }
 
+    if (request.action === "setConfig") {
+
+    }
+
     if (request.action === "getReportFitac") {
-        const statusId = storeData.data.status_id
-        const tipoExpediente = storeData.data.tipo_expediente_c
+        const statusId = request.content.fitacData.status_id
+        const tipoExpediente = request.content.fitacData.tipo_expediente_c
         let idTemplate
         switch (statusId) {
             case 'aprobado':
@@ -185,17 +170,24 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
             idTemplate = '9a4f6d5a-51e6-4f11-06e1-67b511297224';
         }
 
-        if (idTemplate) {
-            const Tefi = new TefiDB();
+        if (idTemplate && request.content.fitacData.id) {
             let blob;
             try {
-                blob = await Tefi.getPDF(storeData.data.id, idTemplate);
+                blob = await TefiDB.getPDF(request.content.fitacData.id, idTemplate);
             } catch (error) {
                 console.error("Error al obtener el documento Fitac.", error);
             }
             if (blob) {
                 const base64 = await blobToBase64(blob);
-                injectCurrentTab({ action: "downloadFitacNew", data: { base64: base64, fileName: `${storeData.roadmap}_INFORME` } });
+                if (!base64) {
+                    console.error("Error al convertir el blob a base64.");
+                    return;
+                }
+
+                request.content.docBase64 = base64.toString()
+                request.action = "downloadFitacNew";
+                request.content.fileName = `${request.content.fitacData.document_name}_INFORME`;
+                injectCurrentTab(request);
             } else {
                 console.error("No se pudo generar el blob para la conversión a base64.");
             }
@@ -203,15 +195,36 @@ chrome.runtime.onMessage.addListener(async function (request: Request) {
     }
 
 }
-
 )
 
-export interface FrontData {
-    roadmap: string;
-    data: IFitac;
-    options: {
-        onlySearch: boolean;
-        noDownload: boolean;
-        isOffice: boolean;
+function setInitialConfigInStorage() {
+    const config = getConfigFromStorage()
+    if (!config) {
+        const request = createRequest()
+        setConfigInStorage(request.config)
     }
+}
+
+function getConfigFromStorage(): Promise<IRequest["config"]> {
+    return new Promise((resolve, reject) => {
+        chrome.storage.local.get(null, (response) => {
+            if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError);
+            } else {
+                resolve(response as IRequest["config"]);
+            }
+        });
+    });
+}
+
+function setConfigInStorage(config: IRequest["config"]): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        chrome.storage.local.set(config, () => {
+            if (chrome.runtime.lastError) {
+                reject(false);
+            } else {
+                resolve(true);
+            }
+        });
+    });
 }

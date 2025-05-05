@@ -1,16 +1,12 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
-
+import { IFitacData } from "../models/IRequest";
 
 export class TefiDB {
-    private api: AxiosInstance;
+    private static api: AxiosInstance = axios.create({
+        baseURL: import.meta.env.VITE_URL_TEFI_DB
+    });
 
-    constructor() {
-        this.api = axios.create({
-            baseURL: import.meta.env.VITE_URL_TEFI_DB
-        });
-    }
-
-    async getFitac(roadmap: string): Promise<any[]> {
+    static async getFitac(roadmap: string): Promise<IFitacData[]> {
         try {
             const response: AxiosResponse<any> = await this.api.get(roadmap);
             return response.data ?? [];
@@ -20,42 +16,32 @@ export class TefiDB {
         }
     }
 
-    async getPDF(id: string, idTemplate: string) {
-
+    static async getPDF(id: string, idTemplate: string): Promise<Blob | undefined> {
         try {
-            const response: AxiosResponse<any> = await this.api.get("/pdf", {
-                params: {
-                    id: id,
-                    idTemplate: idTemplate
-                },
+            const response: AxiosResponse<Blob> = await this.api.get("/pdf", {
+                params: { id, idTemplate },
                 responseType: 'blob'
-            })
-            const blob = response.data
-            return blob
-
+            });
+            return response.data;
         } catch (error) {
             console.error("Error al obtener pdf:", error);
         }
     }
 
-    async getSignPDF(id: string, idTemplate: string, certificate: string, password: string) {
+    static async getSignPDF(id: string, idTemplate: string, certificate: string, password: string): Promise<Blob> {
         try {
-
             const response: AxiosResponse<Blob> = await this.api.post("/pdf", {
                 idFitac: id,
-                idTemplate: idTemplate,
+                idTemplate,
                 passphrase: password,
-                certificate: certificate
+                certificate
             }, {
                 responseType: 'blob'
             });
-
-            const blob = response.data
-            return blob
-
+            return response.data;
         } catch (error) {
             console.error("Error al generar el PDF:", error);
-            throw error; 
+            throw error;
         }
     }
 }
