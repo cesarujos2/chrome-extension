@@ -1,19 +1,21 @@
+import { createRequest } from "../utils/createRequestContent";
+
 export class ModalOverlay {
   private static instance: ModalOverlay | null = null;
   private modalOverlay: HTMLDivElement | null = null;
 
   public static showModal(
-    message: string, timeClose: number = 8000, callback?: () => void
+    message: string, callback?: () => void
   ): ModalOverlay {
     if (!ModalOverlay.instance) {
       ModalOverlay.instance = new ModalOverlay();
     }
-    ModalOverlay.instance.createModal(message, timeClose, callback);
+    ModalOverlay.instance.createModal(message, callback);
     return ModalOverlay.instance;
   }
 
   private createModal(
-    message: string, timeClose: number = 8000, callback?: () => void
+    message: string, callback?: () => void
   ) {
     if (this.modalOverlay) return; // Evita múltiples modales abiertos
 
@@ -35,7 +37,7 @@ export class ModalOverlay {
     const modalContent = document.createElement('form');
     modalContent.style.backgroundColor = '#1E1E2E'; // Color oscuro elegante
     modalContent.style.color = '#F8F8F2';
-    modalContent.style.padding = '24px';
+    modalContent.style.padding = '32px';
     modalContent.style.borderRadius = '12px';
     modalContent.style.width = '90%';
     modalContent.style.maxWidth = '380px';
@@ -73,26 +75,11 @@ export class ModalOverlay {
       button.style.fontSize = '14px';
       button.style.fontWeight = 'bold';
       button.style.transition = 'background-color 0.3s ease, transform 0.1s ease';
-
-      button.onmouseover = () => {
-        button.style.backgroundColor = '#4338CA';
-      };
-
-      button.onmouseout = () => {
-        button.style.backgroundColor = '#4F46E5';
-      };
-
-      button.onmousedown = () => {
-        button.style.transform = 'scale(0.95)';
-      };
-
-      button.onmouseup = () => {
-        button.style.transform = 'scale(1)';
-      };
-
-      button.onfocus = () => {
-        button.style.outline = 'none';
-      };
+      button.onmouseover = () => { button.style.backgroundColor = '#4338CA'; };
+      button.onmouseout = () => { button.style.backgroundColor = '#4F46E5'; };
+      button.onmousedown = () => { button.style.transform = 'scale(0.95)'; };
+      button.onmouseup = () => { button.style.transform = 'scale(1)'; };
+      button.onfocus = () => { button.style.outline = 'none'; };
 
       modalContent.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -102,26 +89,51 @@ export class ModalOverlay {
 
       modalContent.appendChild(document.createElement('br'));
       modalContent.appendChild(button);
-      
+
       setTimeout(() => {
-        button.focus(); // Importante: después de agregarlo al DOM
+        button.focus();
       }, 50);
+
+      //Crear boton para cerrar el modal
+      const closeButton = document.createElement('button');
+      closeButton.textContent = '✕';
+      closeButton.style.position = 'absolute';
+      closeButton.style.top = '8px';
+      closeButton.style.right = '8px';
+      closeButton.style.backgroundColor = 'transparent';
+      closeButton.style.border = 'none';
+      closeButton.style.color = '#F8F8F2';
+      closeButton.style.fontSize = '16px';
+      closeButton.style.cursor = 'pointer';
+      closeButton.style.transition = 'all 0.3s ease';
+      closeButton.style.fontWeight = 'bold';
+      closeButton.style.borderRadius = '50%';
+      closeButton.style.width = '32px';
+      closeButton.onclick = () => this.closeModal();
+      closeButton.onmouseover = () => { closeButton.style.rotate = '90deg'; };
+      closeButton.onmouseout = () => { closeButton.style.rotate = '0deg'; };
+
+      modalContent.appendChild(closeButton);
+
+      setTimeout(() => {
+        const request = createRequest()
+        request.action = "inCurrentTab"
+        request.nextScript = "checkIsMasivo"
+        chrome.runtime.sendMessage(request);
+      }, 8000)
+
+    } else {
+      //Cierra el modal si se hace clic fuera del contenido
+      this.modalOverlay.addEventListener('click', (event) => {
+        if (event.target === this.modalOverlay) {
+          this.closeModal();
+        }
+      });
     }
 
     this.modalOverlay.appendChild(modalContent);
     document.body.appendChild(this.modalOverlay);
 
-    // Cierra el modal si se hace clic fuera del contenido
-    this.modalOverlay.addEventListener('click', (event) => {
-      if (event.target === this.modalOverlay) {
-        this.closeModal();
-      }
-    });
-
-    // Cierra el modal automáticamente tras cierto tiempo, si se especifica
-    if (timeClose) {
-      setTimeout(() => this.closeModal(), timeClose);
-    }
   }
 
   public closeModal() {

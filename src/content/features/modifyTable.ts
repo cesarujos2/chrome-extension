@@ -1,5 +1,4 @@
 import { createRequest } from "../utils/createRequestContent";
-import { copyText } from "./copyText";
 import { guardarEnLocalStorage, obtenerDeLocalStorage } from "./localStorageHandler";
 import { ModalOverlay } from "./ModalOverlay";
 
@@ -53,7 +52,7 @@ export function modifyTable() {
 
             let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsInformeGenerated") ?? [];
             if (roadmapsGenerated.includes(documentName)) {
-                button.textContent = "Generado";
+                button.textContent = "Clickado";
                 button.style.backgroundColor = "#3f3f46";
                 button.style.color = "#fff";
             } else {
@@ -81,18 +80,17 @@ export function modifyTable() {
             button.onclick = async (e: Event) => {
                 e.preventDefault();
                 ModalOverlay.showModal("Ejecutando Generación de Informe...");
-                await copyText(documentName);
 
                 //Buscar oficio
                 const request = createRequest()
                 request.action = "searchRoadMap"
-                request.content.fitacData.document_name = documentName
+                request.content.documents = [documentName]
                 request.content.isOffice = false
                 chrome.runtime.sendMessage(request);
 
                 button.style.backgroundColor = "#3f3f46";
                 button.style.color = "#fff";
-                button.textContent = "Generar";
+                button.textContent = "Clickado";
 
                 let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsInformeGenerated") ?? [];
                 guardarEnLocalStorage("roadmapsInformeGenerated", [...roadmapsGenerated, documentName]);
@@ -116,10 +114,11 @@ export function modifyTable() {
             button.style.fontWeight = "500";
             button.style.boxShadow = "0px 2px 4px rgba(0, 0, 0, 0.1)";
             button.style.transition = "background-color 0.3s ease, transform 0.1s ease";
+            button.textContent = "Generar";
 
             let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsOfficeGenerated") ?? [];
             if (roadmapsGenerated.includes(documentName)) {
-                button.textContent = "Generado";
+                button.textContent = "Clickado";
                 button.style.backgroundColor = "#3f3f46";
                 button.style.color = "#fff";
             } else {
@@ -147,17 +146,16 @@ export function modifyTable() {
             button.onclick = async (e: Event) => {
                 e.preventDefault();
                 ModalOverlay.showModal("Ejecutando generación de Oficio...");
-                await copyText(documentName)
 
                 const request = createRequest()
                 request.action = "searchRoadMap"
-                request.content.fitacData.document_name = documentName
+                request.content.documents = [documentName]
                 request.content.isOffice = true
                 chrome.runtime.sendMessage(request);
 
                 button.style.backgroundColor = "#3f3f46";
                 button.style.color = "#fff";
-                button.textContent = "Generado";
+                button.textContent = "Clickado";
 
                 let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsOfficeGenerated") ?? [];
                 guardarEnLocalStorage("roadmapsOfficeGenerated", [...roadmapsGenerated, documentName]);
@@ -168,4 +166,97 @@ export function modifyTable() {
             cells[colIndex.nroOficio].appendChild(button);
         }
     });
+
+
+    const rowsActions = [':scope > thead', ':scope > tfoot'];
+    const rowActionsButtons = rowsActions.map(selector => table.querySelector(selector)?.querySelector("tbody")?.querySelector(".paginationActionButtons")).filter(Boolean) as HTMLTableRowElement[];
+    //const rowActionsButton = table.querySelector(':scope > thead')?.querySelector("tbody")?.querySelector(".paginationActionButtons") as HTMLTableRowElement;
+
+    if (rowActionsButtons && rowActionsButtons.length > 0) {
+        const crearInformeMasivoBoton = () => {
+            const informeMasivoBoton = document.createElement('li');
+            const informeMasivoBotonLink = document.createElement('a');
+            informeMasivoBotonLink.textContent = 'Generar Informe';
+            informeMasivoBoton.appendChild(informeMasivoBotonLink);
+
+            informeMasivoBotonLink.onclick = async (e: Event) => {
+                e.preventDefault();
+
+                const request = createRequest()
+                tbody?.querySelectorAll("tr").forEach(row => {
+                    const cells = row.querySelectorAll("td");
+                    const checkbox = row.querySelector("input[type='checkbox']") as HTMLInputElement;
+                    const documentName = cells[colIndex.documentName]?.innerText.trim();
+                    const columnInforme = cells[colIndex.columnInforme]?.innerText.trim();
+                    const status = cells[colIndex.status]?.innerText.trim();
+
+                    if (checkbox && checkbox.checked && (!columnInforme || columnInforme == "Generar") && status && status != "por_evaluar" && status != "") {
+                        request.content.documents.push(documentName)
+                        let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsInformeGenerated") ?? [];
+                        if (!roadmapsGenerated.includes(documentName)) {
+                            roadmapsGenerated.push(documentName);
+                        }
+                        guardarEnLocalStorage("roadmapsInformeGenerated", roadmapsGenerated);
+
+                    }
+                })
+
+                if (request.content.documents.length == 0) {
+                    ModalOverlay.showModal("No se seleccionó ningún documento para generar el informe.");
+                    return;
+                }
+
+                request.action = "searchRoadMap"
+                request.content.isOffice = false
+                chrome.runtime.sendMessage(request);
+            }
+
+            return informeMasivoBoton;
+        }
+
+        const crearOfficeMasivoBoton = () => {
+            const officeMasivoBoton = document.createElement('li');
+            const officeMasivoBotonLink = document.createElement('a');
+            officeMasivoBotonLink.textContent = 'Generar Oficio';
+            officeMasivoBoton.appendChild(officeMasivoBotonLink);
+
+            officeMasivoBotonLink.onclick = async (e: Event) => {
+                e.preventDefault();
+
+                const request = createRequest()
+                tbody?.querySelectorAll("tr").forEach(row => {
+                    const cells = row.querySelectorAll("td");
+                    const checkbox = row.querySelector("input[type='checkbox']") as HTMLInputElement;
+                    const documentName = cells[colIndex.documentName]?.innerText.trim();
+                    const columnInforme = cells[colIndex.columnInforme]?.innerText.trim();
+                    const nroOficio = cells[colIndex.nroOficio]?.innerText.trim();
+
+                    if (checkbox && checkbox.checked && (!nroOficio || nroOficio == "Generar") && columnInforme && columnInforme != "" && columnInforme != "Generar" && columnInforme != "Clickado") {
+                        request.content.documents.push(documentName)
+                        let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsOfficeGenerated") ?? [];
+                        if (!roadmapsGenerated.includes(documentName)) {
+                            roadmapsGenerated.push(documentName);
+                        }
+                        guardarEnLocalStorage("roadmapsOfficeGenerated", roadmapsGenerated);
+                    }
+                })
+
+                if (request.content.documents.length == 0) {
+                    ModalOverlay.showModal("No se seleccionó ningún documento para generar el oficio.");
+                    return;
+                }
+
+                request.action = "searchRoadMap"
+                request.content.isOffice = true
+                chrome.runtime.sendMessage(request);
+            }
+            return officeMasivoBoton;
+        }
+
+        const actionsMasivoBoton = rowActionsButtons.map(row => row.querySelector("[id^='actionLink']")?.querySelector("ul")) as HTMLUListElement[];
+        actionsMasivoBoton.forEach(row => {
+            row.appendChild(crearInformeMasivoBoton());
+            row.appendChild(crearOfficeMasivoBoton());
+        });
+    }
 }

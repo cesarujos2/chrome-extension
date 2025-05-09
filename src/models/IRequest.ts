@@ -1,6 +1,8 @@
 export interface IRequest {
     action: string;
     content: {
+        documents: string[];
+        index: number;
         fitacData: Partial<IFitacData>;
         docBase64: string;
         fileName: string;

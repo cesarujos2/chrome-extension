@@ -1,6 +1,6 @@
 export async function findElementWithRetry(
   query: string, // Selector: #id, .clase, tag, etc.
-  maxRetries: number = 100, // Número máximo de intentos
+  maxRetries: number = 1000, // Número máximo de intentos
   interval: number = 1000 // Intervalo entre intentos en milisegundos
 ): Promise<HTMLElement | null> {
   let attempts = 0;

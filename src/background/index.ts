@@ -42,7 +42,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
 
     if (request.action === 'searchRoadMap') {
         const config = await getConfigFromStorage()
-        const roadmap = request.content.fitacData.document_name
+        const roadmap = request.content.documents[request.content.index]
         if (!roadmap) { return }
         const data = await TefiDB.getFitac(roadmap)
         if (data.length == 0) { return }
@@ -58,7 +58,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
             })
 
             request.action = "loadRoadMap"
-            if (stdOpened.length > 0 && stdOpened[0].id) {
+            if (stdOpened.length > 0 && stdOpened[0].id && request.content.index == 0) {
                 chrome.tabs.update(stdOpened[0].id, { active: true })
                 injectForId(stdOpened[0].id, request)
             } else {
@@ -138,10 +138,6 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                 console.error("No se pudo generar el blob para la conversión a base64.");
             }
         }
-    }
-
-    if (request.action === "setConfig") {
-
     }
 
     if (request.action === "getReportFitac") {

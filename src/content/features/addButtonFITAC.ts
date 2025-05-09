@@ -41,7 +41,7 @@ export function addButtonFITAC() {
             backgroundColor: isGenerated ? "#3f3f46" : "#F08377"
         });
 
-        button.textContent = isGenerated ? `Generado ${text}` : `Generar ${text}`;
+        button.textContent = `Generar ${text}`;
 
         // Eventos de interacción
         button.onmouseover = () => button.style.filter = "brightness(90%)";
@@ -55,12 +55,12 @@ export function addButtonFITAC() {
 
             // Enviar mensaje al background script
             const request = createRequest()
-            request.content.fitacData.document_name = documentName;
+            request.action = "searchRoadMap"
+            request.content.documents = [documentName];
             request.content.isOffice = isOffice;
             chrome.runtime.sendMessage(request);
 
             button.style.backgroundColor = "#3f3f46";
-            button.textContent = `Generado ${text}`;
             guardarEnLocalStorage(storageKey, [...roadmapsGenerated, documentName]);
         };
 

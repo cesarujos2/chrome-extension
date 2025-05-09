@@ -8,6 +8,7 @@ import { customTefi } from './features/customTefi';
 import { addButtonFITAC } from './features/addButtonFITAC';
 import { IRequest } from '../models/IRequest';
 import { createRequest } from './utils/createRequestContent';
+import { copyText } from './features/copyText';
 
 chrome.runtime.onMessage.addListener(async function (request: IRequest) {
     if (request.action === 'loadRoadMap') {
@@ -72,8 +73,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                     const lastCell = cells[cells.length - 1];
                     if ((lastCell?.textContent?.trim().toUpperCase() === "VISAR" && request.content.isOffice) ||
                         (lastCell?.textContent?.trim().toUpperCase() === "FIRMAR" && !request.content.isOffice)) {
-                        ModalOverlay.showModal("Ya ha sido derivado, ¿desea proceder a derivar igualmente?", 8000, () => {
-
+                        ModalOverlay.showModal("Ya ha sido derivado, ¿desea proceder a derivar igualmente?", () => {
                             //* Si el usuario acepta, se hace clic en el botón de "Generar doc. electronico" */
                             request.action = 'inCurrentTab';
                             request.nextScript = 'clickOnGenerateDocument';
@@ -89,7 +89,11 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
             request.nextScript = 'clickOnGenerateDocument';
             chrome.runtime.sendMessage(request);
         } else {
-            ModalOverlay.showModal("No se encontró la tabla de movimientos.");
+            ModalOverlay.showModal("No se encontró la tabla de movimientos.", () => {
+                request.action = "inCurrentTab"
+                request.nextScript = "checkIsMasivo"
+                chrome.runtime.sendMessage(request);
+            });
         }
     }
 
@@ -120,7 +124,11 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                 }
             }
             if (!encontrado) {
-                ModalOverlay.showModal("No existe la opción de generar documento electrónico");
+                ModalOverlay.showModal("No existe la opción de generar documento electrónico", () => {
+                    request.action = "inCurrentTab"
+                    request.nextScript = "checkIsMasivo"
+                    chrome.runtime.sendMessage(request);
+                });
             }
         }
     }
@@ -203,7 +211,11 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         const inputUO = dialogUO?.querySelectorAll("input")[1] as HTMLInputElement
         const tableUO = dialogUO?.querySelector("table") as HTMLTableElement
         if (!inputUO || !tableUO) {
-            ModalOverlay.showModal("No se encontró el input de UO destino");
+            ModalOverlay.showModal("No se encontró el input de UO destino", () => {
+                request.action = "inCurrentTab"
+                request.nextScript = "checkIsMasivo"
+                chrome.runtime.sendMessage(request);
+            });
             return;
         }
 
@@ -212,7 +224,11 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         const aceptarUO = dialogUO?.querySelector("form")?.querySelector("a") as HTMLAnchorElement
         const addFirm = (await findElementWithRetry("#idproyectonuevo\\:seccionAddFirmante"))?.querySelector("button") as HTMLButtonElement
         if (!checkUO || !aceptarUO || !addFirm) {
-            ModalOverlay.showModal("No se encontró el check de UO destino");
+            ModalOverlay.showModal("No se encontró el check de UO destino", () => {
+                request.action = "inCurrentTab"
+                request.nextScript = "checkIsMasivo"
+                chrome.runtime.sendMessage(request);
+            });
             return;
         }
         checkUO.click()
@@ -229,7 +245,11 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
     if (request.action === 'addVisador') {
         const buttonVisador = await findElementWithRetry("#idproyectonuevo\\:seccionBotonesVisador")
         if (!buttonVisador) {
-            ModalOverlay.showModal("No se encontró el botón de visador");
+            ModalOverlay.showModal("No se encontró el botón de visador", () => {
+                request.action = "inCurrentTab"
+                request.nextScript = "checkIsMasivo"
+                chrome.runtime.sendMessage(request);
+            });
             return;
         }
 
@@ -239,26 +259,42 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         const tableUOVisador = dialogVisador?.querySelector("table") as HTMLTableElement
         const inputUOVisador = dialogVisador?.querySelectorAll("input")[1] as HTMLInputElement
         if (!inputUOVisador || !tableUOVisador) {
-            ModalOverlay.showModal("No se encontró el input de UO del visador");
+            ModalOverlay.showModal("No se encontró el input de UO del visador", () => {
+                request.action = "inCurrentTab"
+                request.nextScript = "checkIsMasivo"
+                chrome.runtime.sendMessage(request);
+            });
             return;
         }
 
         const rowUOVisador = await getRowUO(inputUOVisador, tableUOVisador, '26.01');
         const checkUOVisador = rowUOVisador?.querySelector("input") as HTMLInputElement
         if (!checkUOVisador) {
-            ModalOverlay.showModal("No se encontró el check de UO del visador");
+            ModalOverlay.showModal("No se encontró el check de UO del visador", () => {
+                request.action = "inCurrentTab"
+                request.nextScript = "checkIsMasivo"
+                chrome.runtime.sendMessage(request);
+            });
             return;
         }
         checkUOVisador.click()
 
         const bossName = getBoss();
         if (!bossName) {
-            ModalOverlay.showModal("No se encontró Jefe")
+            ModalOverlay.showModal("No se encontró Jefe", () => {
+                request.action = "inCurrentTab"
+                request.nextScript = "checkIsMasivo"
+                chrome.runtime.sendMessage(request);
+            });
             return
         }
         const checkedVisador1 = await getUserByName(dialogVisador, bossName, 0, true);
         if (!checkedVisador1) {
-            ModalOverlay.showModal("No se encontró el usuario " + bossName, 5000);
+            ModalOverlay.showModal("No se encontró el usuario " + bossName, () => {
+                request.action = "inCurrentTab"
+                request.nextScript = "checkIsMasivo"
+                chrome.runtime.sendMessage(request);
+            });
             return;
         }
         const aceptarVisador = dialogVisador?.querySelector("form")?.querySelector("a") as HTMLAnchorElement
@@ -275,7 +311,11 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         if (request.config.signLegal) {
             const buttonVisador = await findElementWithRetry("#idproyectonuevo\\:seccionBotonesVisador")
             if (!buttonVisador) {
-                ModalOverlay.showModal("No se encontró el botón de visador");
+                ModalOverlay.showModal("No se encontró el botón de visador", () => {
+                    request.action = "inCurrentTab"
+                    request.nextScript = "checkIsMasivo"
+                    chrome.runtime.sendMessage(request);
+                });
                 return;
             }
 
@@ -285,14 +325,22 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
             const tableUOVisador = dialogVisador?.querySelector("table") as HTMLTableElement
             const inputUOVisador = dialogVisador?.querySelectorAll("input")[1] as HTMLInputElement
             if (!inputUOVisador || !tableUOVisador) {
-                ModalOverlay.showModal("No se encontró el input de UO del firmante");
+                ModalOverlay.showModal("No se encontró el input de UO del firmante", () => {
+                    request.action = "inCurrentTab"
+                    request.nextScript = "checkIsMasivo"
+                    chrome.runtime.sendMessage(request);
+                });
                 return;
             }
 
             const rowUOVisador = await getRowUO(inputUOVisador, tableUOVisador, '26.01');
             const checkUOVisador = rowUOVisador?.querySelector("input") as HTMLInputElement
             if (!checkUOVisador) {
-                ModalOverlay.showModal("No se encontró el check de UO del firmante");
+                ModalOverlay.showModal("No se encontró el check de UO del firmante", () => {
+                    request.action = "inCurrentTab"
+                    request.nextScript = "checkIsMasivo"
+                    chrome.runtime.sendMessage(request);
+                });
                 return;
             }
             checkUOVisador.click()
@@ -300,7 +348,11 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
             const bossName = 'LUIS JESUS CARBAJAL MANCO';
             const checkedVisador1 = await getUserByName(dialogVisador, bossName, 0, true);
             if (!checkedVisador1) {
-                ModalOverlay.showModal("No se encontró el usuario " + bossName, 5000);
+                ModalOverlay.showModal("No se encontró el usuario " + bossName, () => {
+                    request.action = "inCurrentTab"
+                    request.nextScript = "checkIsMasivo"
+                    chrome.runtime.sendMessage(request);
+                });
                 return;
             }
             const aceptarVisador = dialogVisador?.querySelector("form")?.querySelector("a") as HTMLAnchorElement
@@ -317,7 +369,11 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
     if (request.action === 'selectUODestinationInforme') {
         const sectionSelectDestination = await findElementWithRetry("#idproyectonuevo\\:seccionElegirDestinatarios")
         if (!sectionSelectDestination) {
-            ModalOverlay.showModal("No se encontró la sección de elegir destinatarios");
+            ModalOverlay.showModal("No se encontró la sección de elegir destinatarios", () => {
+                request.action = "inCurrentTab"
+                request.nextScript = "checkIsMasivo"
+                chrome.runtime.sendMessage(request);
+            });
             return;
         }
         const buttonOpenDestination = sectionSelectDestination.querySelector("button") as HTMLButtonElement
@@ -327,14 +383,22 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         const inputUO = dialogUO?.querySelectorAll("input")[2] as HTMLInputElement
         const tableUO = dialogUO?.querySelector("table") as HTMLTableElement
         if (!inputUO || !tableUO) {
-            ModalOverlay.showModal("No se encontró el input de UO destino");
+            ModalOverlay.showModal("No se encontró el input de UO destino", () => {
+                request.action = "inCurrentTab"
+                request.nextScript = "checkIsMasivo"
+                chrome.runtime.sendMessage(request);
+            });
             return;
         }
 
         const rowUO = await getRowUO(inputUO, tableUO, '26');
         const checkUO = rowUO?.querySelector("input") as HTMLInputElement
         if (!checkUO) {
-            ModalOverlay.showModal("No se encontró el check de UO destino");
+            ModalOverlay.showModal("No se encontró el check de UO destino", () => {
+                request.action = "inCurrentTab"
+                request.nextScript = "checkIsMasivo"
+                chrome.runtime.sendMessage(request);
+            });
             return;
         }
         checkUO.click()
@@ -355,7 +419,11 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         if (request.content.fitacData.status_id == 'desaprobado') {
             const sectionSelectDestination = await findElementWithRetry("#idproyectonuevo\\:seccionElegirDestinatarios")
             if (!sectionSelectDestination) {
-                ModalOverlay.showModal("No se encontró la sección de elegir destinatarios");
+                ModalOverlay.showModal("No se encontró la sección de elegir destinatarios", () => {
+                    request.action = "inCurrentTab"
+                    request.nextScript = "checkIsMasivo"
+                    chrome.runtime.sendMessage(request);
+                });
                 return;
             }
             const buttonOpenDestination = sectionSelectDestination.querySelector("button") as HTMLButtonElement
@@ -365,14 +433,22 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
             const inputUO = dialogUO?.querySelectorAll("input")[2] as HTMLInputElement
             const tableUO = dialogUO?.querySelector("table") as HTMLTableElement
             if (!inputUO || !tableUO) {
-                ModalOverlay.showModal("No se encontró el input de UO destino");
+                ModalOverlay.showModal("No se encontró el input de UO destino", () => {
+                    request.action = "inCurrentTab"
+                    request.nextScript = "checkIsMasivo"
+                    chrome.runtime.sendMessage(request);
+                });
                 return;
             }
 
             const rowUO = await getRowUO(inputUO, tableUO, '29');
             const checkUO = rowUO?.querySelector("input") as HTMLInputElement
             if (!checkUO) {
-                ModalOverlay.showModal("No se encontró el check de UO destino");
+                ModalOverlay.showModal("No se encontró el check de UO destino", () => {
+                    request.action = "inCurrentTab"
+                    request.nextScript = "checkIsMasivo"
+                    chrome.runtime.sendMessage(request);
+                });
                 return;
             }
             checkUO.click()
@@ -412,6 +488,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
     }
 
     if (request.action === 'generarDocumento') {
+        await copyText(request.content.fitacData.document_name ?? "");
         document.getElementById("idproyectonuevo:btnDespachar")?.click()
         document.getElementById("idproyectonuevo:seccionBotones")?.querySelectorAll("button")[0]?.click();
         const d = async (intentos: number = 0) => {
@@ -428,10 +505,12 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         buttons.forEach(x => {
             x.textContent == 'Generar Doc.' && x.click();
         })
-        const linkShowUploadPdf = await findElementWithRetry("#idproyectonuevo\\:linkShowUploadPdf")
-        if (!linkShowUploadPdf) { return; }
-        linkShowUploadPdf.click()
-        const sectionDocFirmado = await findElementWithRetry("#idproyectonuevo\\:seccionDocFirmado", 1000, 1000) as HTMLDivElement
+        if (!request.content.isOffice) {
+            const linkShowUploadPdf = await findElementWithRetry("#idproyectonuevo\\:linkShowUploadPdf")
+            if (!linkShowUploadPdf) { return; }
+            linkShowUploadPdf.click()
+        }
+        const sectionDocFirmado = await findElementWithRetry("#idproyectonuevo\\:seccionDocFirmado") as HTMLDivElement
         if (!sectionDocFirmado) { return; }
         const seccionBotones = Array.from(document.getElementById("idproyectonuevo:seccionBotones")?.querySelectorAll("button") ?? []) as HTMLButtonElement[]
         if (!seccionBotones) { return; }
@@ -440,10 +519,21 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                 x.click()
             }
         })
+
+        request.action = "inCurrentTabWithDelay"
+        request.nextScript = "checkIsMasivo"
+        request.delay = 3000
+        chrome.runtime.sendMessage(request);
+
+    }
+
+    if (request.action == "checkIsMasivo") {
+        request.action = "searchRoadMap"
+        request.content.index = request.content.index + 1
+        chrome.runtime.sendMessage(request);
     }
 
     if (request.action === "downloadFitacNew") {
-        const modal = ModalOverlay.showModal("Descargando documento...");
         const base64 = request.content.docBase64;
         const fileName = request.content.fileName;
         if (!base64 || !fileName) {
@@ -461,14 +551,18 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         }
 
         const blob = new Blob([bytes], { type: mime });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${fileName}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        URL.revokeObjectURL(url);
-        modal.closeModal();
+        const file = new File([blob], `${fileName}.pdf`, { type: mime });
+
+        const linkShowUploadPdf = await findElementWithRetry("#idproyectonuevo\\:linkShowUploadPdf", 1000, 1000) as HTMLDivElement
+        if (!linkShowUploadPdf) { return; }
+        const inputFile = await findElementWithRetry('#formCargarPDf\\:iduploadPDf_input', 1000, 1000) as HTMLInputElement
+        if (!inputFile) { return; }
+
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        inputFile.files = dataTransfer.files;
+        inputFile.dispatchEvent(new Event('change', { bubbles: true }));
+
     }
 
     if (request.action === "injectTheme") {
@@ -488,13 +582,14 @@ chrome.runtime.sendMessage(request)
 
 
 const observer = new MutationObserver(() => {
-    console.log("MutationObserver triggered");
+    console.log("MutationObserver SweetAlert triggered");
     const sweetAlert = document.querySelector(".sweet-alert.showSweetAlert.visible") as HTMLDivElement;
     const sweetOverlay = document.querySelector(".sweet-overlay") as HTMLDivElement;
 
     if (sweetAlert && sweetOverlay) {
         sweetAlert.style.display = "none";
         sweetOverlay.style.display = "none";
+        observer.disconnect();
     }
 });
 

@@ -6,6 +6,8 @@ export function createRequest(): IRequest {
       nextScript: "",
       delay: 0,
       content: {
+        documents: [],
+        index: 0,
         isOffice: true,
         fileName: "",
         docBase64: "",
