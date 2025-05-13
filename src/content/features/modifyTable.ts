@@ -93,7 +93,10 @@ export function modifyTable() {
                 button.textContent = "Clickado";
 
                 let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsInformeGenerated") ?? [];
-                guardarEnLocalStorage("roadmapsInformeGenerated", [...roadmapsGenerated, documentName]);
+                if (!roadmapsGenerated.includes(documentName)) {
+                   roadmapsGenerated.push(documentName);
+                }
+                guardarEnLocalStorage("roadmapsInformeGenerated", roadmapsGenerated);
             };
 
 
@@ -158,7 +161,10 @@ export function modifyTable() {
                 button.textContent = "Clickado";
 
                 let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsOfficeGenerated") ?? [];
-                guardarEnLocalStorage("roadmapsOfficeGenerated", [...roadmapsGenerated, documentName]);
+                if (!roadmapsGenerated.includes(documentName)) {
+                    roadmapsGenerated.push(documentName);
+                }
+                guardarEnLocalStorage("roadmapsOfficeGenerated", roadmapsGenerated);
             };
 
 
