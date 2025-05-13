@@ -574,7 +574,6 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
 
 
 modifyTable();
-addButtonFITAC();
 
 const request = createRequest()
 request.action = "getTheme"
