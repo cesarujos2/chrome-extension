@@ -5,7 +5,6 @@ import { getRowUO } from './features/getRowUO';
 import { getBoss } from './features/getBossSTD';
 import { getUserByName } from './features/getUserByName';
 import { customTefi } from './features/customTefi';
-import { addButtonFITAC } from './features/addButtonFITAC';
 import { IRequest } from '../models/IRequest';
 import { createRequest } from './utils/createRequestContent';
 import { copyText } from './features/copyText';
