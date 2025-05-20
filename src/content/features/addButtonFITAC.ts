@@ -1,8 +1,8 @@
 import { createRequest } from "../utils/createRequestContent";
-import { guardarEnLocalStorage, obtenerDeLocalStorage } from "./localStorageHandler";
+import { sendMessageAsync } from "../utils/sendMessageAsync";
 import { ModalOverlay } from "./ModalOverlay";
 
-export function addButtonFITAC() {
+export async function addButtonFITAC() {
     if (!window.location.href.includes("dgprc.atm-erp.com/dgprc/index.php?module=Fitac_fitac")) return;
 
     const buttonsContainer = document.querySelectorAll(".buttons")[1];
@@ -19,10 +19,13 @@ export function addButtonFITAC() {
      * Crea un botón con estilos y funcionalidad específica
      * @param text Texto del botón
      * @param isOffice Indica si es un oficio
-     * @param storageKey Clave para almacenamiento local
      */
-    const createButton = (text: string, isOffice: boolean, storageKey: string) => {
-        const roadmapsGenerated = obtenerDeLocalStorage<string[]>(storageKey) ?? [];
+    const createButton = async(text: string, isOffice: boolean) => {
+
+        const request = createRequest();
+        request.action = "getRoadmapsGenerated";
+        request.content.isOffice = isOffice;
+        const roadmapsGenerated = await sendMessageAsync(request);
         const isGenerated = roadmapsGenerated.includes(documentName);
 
         const button = document.createElement("button");
@@ -41,7 +44,7 @@ export function addButtonFITAC() {
             backgroundColor: isGenerated ? "#3f3f46" : "#F08377"
         });
 
-        button.textContent = `Generar ${text}`;
+        button.textContent = isGenerated ? `Repetir ${text}` : `Generar ${text}`;
 
         // Eventos de interacción
         button.onmouseover = () => button.style.filter = "brightness(90%)";
@@ -61,7 +64,6 @@ export function addButtonFITAC() {
             chrome.runtime.sendMessage(request);
 
             button.style.backgroundColor = "#3f3f46";
-            guardarEnLocalStorage(storageKey, [...roadmapsGenerated, documentName]);
         };
 
         return button;
@@ -70,9 +72,9 @@ export function addButtonFITAC() {
 
     // Agregar botones si se cumplen las condiciones
     if (statusId !== "" && statusId !== "por_evaluar" && nroOficio == "" && nroInforme == "") {
-        buttonsContainer.appendChild(createButton("Informe", false, "roadmapsInformeGenerated"));
+        buttonsContainer.appendChild(await createButton("Informe", false));
     }
     if (nroInforme !== "" && nroOficio == "") {
-        buttonsContainer.appendChild(createButton("Oficio", true, "roadmapsOfficeGenerated"));
+        buttonsContainer.appendChild(await createButton("Oficio", true));
     }
 }

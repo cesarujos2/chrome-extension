@@ -1,8 +1,8 @@
 import { createRequest } from "../utils/createRequestContent";
-import { guardarEnLocalStorage, obtenerDeLocalStorage } from "./localStorageHandler";
+import { sendMessageAsync } from "../utils/sendMessageAsync";
 import { ModalOverlay } from "./ModalOverlay";
 
-export function modifyTable() {
+export async function modifyTable() {
     const table = document.querySelector("table.list.view.table-responsive");
 
     if (!table) {
@@ -27,7 +27,7 @@ export function modifyTable() {
 
     // Iterar sobre las filas de la tabla
     const tbody = table.querySelector(':scope > tbody')
-    tbody?.querySelectorAll("tr").forEach(row => {
+    tbody?.querySelectorAll("tr").forEach(async row => {
         const cells = row.querySelectorAll("td");
         if (cells.length != headers.length) return;
 
@@ -50,9 +50,13 @@ export function modifyTable() {
             button.style.boxShadow = "0px 2px 4px rgba(0, 0, 0, 0.1)";
             button.style.transition = "background-color 0.3s ease, transform 0.1s ease";
 
-            let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsInformeGenerated") ?? [];
+            const request = createRequest()
+            request.action = "getRoadmapsGenerated"
+            request.content.isOffice = false
+            let roadmapsGenerated = await sendMessageAsync<string[]>(request);
+
             if (roadmapsGenerated.includes(documentName)) {
-                button.textContent = "Clickado";
+                button.textContent = "Generado";
                 button.style.backgroundColor = "#3f3f46";
                 button.style.color = "#fff";
             } else {
@@ -88,15 +92,9 @@ export function modifyTable() {
                 request.content.isOffice = false
                 chrome.runtime.sendMessage(request);
 
-                button.style.backgroundColor = "#3f3f46";
+                button.style.backgroundColor = "rgb(95 95 95)";
                 button.style.color = "#fff";
                 button.textContent = "Clickado";
-
-                let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsInformeGenerated") ?? [];
-                if (!roadmapsGenerated.includes(documentName)) {
-                   roadmapsGenerated.push(documentName);
-                }
-                guardarEnLocalStorage("roadmapsInformeGenerated", roadmapsGenerated);
             };
 
 
@@ -119,9 +117,12 @@ export function modifyTable() {
             button.style.transition = "background-color 0.3s ease, transform 0.1s ease";
             button.textContent = "Generar";
 
-            let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsOfficeGenerated") ?? [];
+            const request = createRequest()
+            request.action = "getRoadmapsGenerated"
+            request.content.isOffice = true
+            let roadmapsGenerated = await sendMessageAsync<string[]>(request);
             if (roadmapsGenerated.includes(documentName)) {
-                button.textContent = "Clickado";
+                button.textContent = "Generado";
                 button.style.backgroundColor = "#3f3f46";
                 button.style.color = "#fff";
             } else {
@@ -156,15 +157,9 @@ export function modifyTable() {
                 request.content.isOffice = true
                 chrome.runtime.sendMessage(request);
 
-                button.style.backgroundColor = "#3f3f46";
+                button.style.backgroundColor = "rgb(95 95 95)";
                 button.style.color = "#fff";
                 button.textContent = "Clickado";
-
-                let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsOfficeGenerated") ?? [];
-                if (!roadmapsGenerated.includes(documentName)) {
-                    roadmapsGenerated.push(documentName);
-                }
-                guardarEnLocalStorage("roadmapsOfficeGenerated", roadmapsGenerated);
             };
 
 
@@ -198,11 +193,6 @@ export function modifyTable() {
 
                     if (checkbox && checkbox.checked && (!columnInforme || columnInforme == "Generar") && status && status != "por_evaluar" && status != "") {
                         request.content.documents.push(documentName)
-                        let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsInformeGenerated") ?? [];
-                        if (!roadmapsGenerated.includes(documentName)) {
-                            roadmapsGenerated.push(documentName);
-                        }
-                        guardarEnLocalStorage("roadmapsInformeGenerated", roadmapsGenerated);
 
                     }
                 })
@@ -237,13 +227,9 @@ export function modifyTable() {
                     const columnInforme = cells[colIndex.columnInforme]?.innerText.trim();
                     const nroOficio = cells[colIndex.nroOficio]?.innerText.trim();
 
-                    if (checkbox && checkbox.checked && (!nroOficio || nroOficio == "Generar") && columnInforme && columnInforme != "" && columnInforme != "Generar" && columnInforme != "Clickado") {
+                    if (checkbox && checkbox.checked && (!nroOficio || nroOficio == "Generar") && columnInforme && columnInforme != "" 
+                    && columnInforme != "Generar" && columnInforme != "Generado" && columnInforme != "Clickado") {
                         request.content.documents.push(documentName)
-                        let roadmapsGenerated = obtenerDeLocalStorage<string[]>("roadmapsOfficeGenerated") ?? [];
-                        if (!roadmapsGenerated.includes(documentName)) {
-                            roadmapsGenerated.push(documentName);
-                        }
-                        guardarEnLocalStorage("roadmapsOfficeGenerated", roadmapsGenerated);
                     }
                 })
 

@@ -8,6 +8,8 @@ import { customTefi } from './features/customTefi';
 import { IRequest } from '../models/IRequest';
 import { createRequest } from './utils/createRequestContent';
 import { copyText } from './features/copyText';
+import { sendMessageAsync } from './utils/sendMessageAsync';
+import { addButtonFITAC } from './features/addButtonFITAC';
 
 chrome.runtime.onMessage.addListener(async function (request: IRequest) {
     if (request.action === 'loadRoadMap') {
@@ -521,7 +523,13 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         if (!seccionBotones) { return; }
         seccionBotones.forEach(x => {
             if (x.textContent == 'Despachar') {
-                x.click()
+                x.click();
+
+                const reqSet = createRequest()
+                reqSet.action = "setRoadmapGenerated"
+                reqSet.content.isOffice = request.content.isOffice
+                reqSet.content.fitacData.document_name = request.content.fitacData.document_name
+                sendMessageAsync(reqSet)
             }
         })
 
@@ -579,6 +587,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
 
 
 modifyTable();
+addButtonFITAC();
 
 const request = createRequest()
 request.action = "getTheme"

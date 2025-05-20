@@ -13,8 +13,14 @@ setInitialConfigInStorage();
 chrome.runtime.onMessage.addListener(async function (request: IRequest) {
 
     if (request.action === 'setConfig') {
-        console.log(request.config)
         await setConfigInStorage(request.config);
+    }
+
+    if (request.action === 'setRoadmapGenerated') {
+        const roadmap = request.content.fitacData.document_name
+        if (roadmap) {
+            await setRoadmapGeneratedInStorage(roadmap, request.content.isOffice)
+        }
     }
 
     if (request.action === 'getTheme') {
@@ -190,8 +196,24 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         }
     }
 
+    return true;
 }
 )
+
+chrome.runtime.onMessage.addListener(
+    (request: IRequest, _sender, sendResponse) => {
+        if (request.action === 'getRoadmapsGenerated') {
+            getRoadMapsGeneratedInStorage(request.content.isOffice)
+                .then((roadmaps) => {
+                    sendResponse(roadmaps);
+                })
+                .catch(() => {
+                    sendResponse([]);
+                });
+        }
+        return true;
+    }
+);
 
 function setInitialConfigInStorage() {
     const config = getConfigFromStorage()
@@ -220,6 +242,35 @@ function setConfigInStorage(config: IRequest["config"]): Promise<boolean> {
                 reject(false);
             } else {
                 resolve(true);
+            }
+        });
+    });
+}
+
+async function setRoadmapGeneratedInStorage(roadmap: string, isOffice: boolean): Promise<boolean> {
+    const roadmaps = await getRoadMapsGeneratedInStorage(isOffice);
+    if (!roadmaps.includes(roadmap)) {
+        roadmaps.push(roadmap);
+        return new Promise((resolve, reject) => {
+            chrome.storage.local.set({ roadmapGenerated: roadmaps }, () => {
+                if (chrome.runtime.lastError) {
+                    reject(false);
+                } else {
+                    resolve(true);
+                }
+            });
+        });
+    }
+    return Promise.resolve(true);
+}
+
+function getRoadMapsGeneratedInStorage(isOffice: boolean): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+        chrome.storage.local.get('roadmapGenerated' + (isOffice ? '_office' : ''), (response) => {
+            if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError);
+            } else {
+                resolve(response.roadmapGenerated || []);
             }
         });
     });
