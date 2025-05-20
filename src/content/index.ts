@@ -72,12 +72,18 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                     const lastCell = cells[cells.length - 1];
                     if ((lastCell?.textContent?.trim().toUpperCase() === "VISAR" && request.content.isOffice) ||
                         (lastCell?.textContent?.trim().toUpperCase() === "FIRMAR" && !request.content.isOffice)) {
-                        ModalOverlay.showModal("Ya ha sido derivado, ¿desea proceder a derivar igualmente?", () => {
-                            //* Si el usuario acepta, se hace clic en el botón de "Generar doc. electronico" */
-                            request.action = 'inCurrentTab';
-                            request.nextScript = 'clickOnGenerateDocument';
-                            chrome.runtime.sendMessage(request);
-                        })
+                        ModalOverlay.showModal("Ya ha sido derivado!",
+                            () => {
+                                request.action = "inCurrentTab"
+                                request.nextScript = "checkIsMasivo"
+                                chrome.runtime.sendMessage(request);
+                            }
+                            , () => {
+                                //* Si el usuario acepta, se hace clic en el botón de "Generar doc. electronico" */
+                                request.action = 'inCurrentTab';
+                                request.nextScript = 'clickOnGenerateDocument';
+                                chrome.runtime.sendMessage(request);
+                            })
                         return;
                     }
                 }
@@ -519,7 +525,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
             }
         })
 
-        request.action = "inCurrentTabWithDelay"
+        request.action = "waiting"
         request.nextScript = "checkIsMasivo"
         request.delay = 3000
         chrome.runtime.sendMessage(request);

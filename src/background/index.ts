@@ -58,7 +58,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
             })
 
             request.action = "loadRoadMap"
-            if (stdOpened.length > 0 && stdOpened[0].id && request.content.index == 0) {
+            if (stdOpened.length > 0 && stdOpened[0].id) {
                 chrome.tabs.update(stdOpened[0].id, { active: true })
                 injectForId(stdOpened[0].id, request)
             } else {
