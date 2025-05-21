@@ -252,7 +252,7 @@ async function setRoadmapGeneratedInStorage(roadmap: string, isOffice: boolean):
     if (!roadmaps.includes(roadmap)) {
         roadmaps.push(roadmap);
         return new Promise((resolve, reject) => {
-            chrome.storage.local.set({ roadmapGenerated: roadmaps }, () => {
+            chrome.storage.local.set({ ['roadmapGenerated' + (isOffice ? '_office' : '')]: roadmaps }, () => {
                 if (chrome.runtime.lastError) {
                     reject(false);
                 } else {
@@ -270,7 +270,7 @@ function getRoadMapsGeneratedInStorage(isOffice: boolean): Promise<string[]> {
             if (chrome.runtime.lastError) {
                 reject(chrome.runtime.lastError);
             } else {
-                resolve(response.roadmapGenerated || []);
+                resolve(response['roadmapGenerated' + (isOffice ? '_office' : '')] || []);
             }
         });
     });
