@@ -10,6 +10,7 @@ import { createRequest } from './utils/createRequestContent';
 import { copyText } from './features/copyText';
 import { sendMessageAsync } from './utils/sendMessageAsync';
 import { addButtonFITAC } from './features/addButtonFITAC';
+import { whileAsync } from './features/whileAsync';
 
 chrome.runtime.onMessage.addListener(async function (request: IRequest) {
     if (request.action === 'loadRoadMap') {
@@ -79,6 +80,12 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                                 request.action = "inCurrentTab"
                                 request.nextScript = "checkIsMasivo"
                                 chrome.runtime.sendMessage(request);
+
+                                var registerHr = createRequest()
+                                registerHr.action = "setRoadmapGenerated"
+                                registerHr.content.isOffice = request.content.isOffice
+                                registerHr.content.fitacData.document_name = request.content.fitacData.document_name
+                                chrome.runtime.sendMessage(registerHr);
                             }
                             , () => {
                                 //* Si el usuario acepta, se hace clic en el botón de "Generar doc. electronico" */
@@ -479,7 +486,16 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         textareaJuridica.textContent = `El administrado autorizó notificación vía correo electrónico a los siguientes correos: ${request.content.fitacData.emails_concat}`;
         const buttons = document.getElementById("dlg_ruc")?.querySelectorAll("button")
         buttons?.[1].click()
-        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        await whileAsync(
+            () => document.getElementById("dlg_ruc")?.lastElementChild?.firstElementChild?.children[2].children[1].children[1].querySelectorAll("input")[1].value == "",
+            () => {
+                if (document.getElementById("formDialogoRUC:idtablePersonasRuc")) {
+                    document.getElementById("formDialogoRUC:idtablePersonasRuc")?.querySelector("tbody")?.querySelector("a")?.click();
+                }
+            }
+        )
+
         buttons?.[0].click()
         if (request.content.isOffice) {
             //Descargar documento si es oficio
