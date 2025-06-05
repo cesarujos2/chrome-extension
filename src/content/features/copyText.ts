@@ -1,3 +1,7 @@
 export async function copyText(textToCopy: string) {
-    await navigator.clipboard.writeText(textToCopy);
+    try{
+        await navigator.clipboard.writeText(textToCopy);
+    } catch (error) {
+        console.error("Error copying text: ", error);
+    }
 }

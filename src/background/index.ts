@@ -1,7 +1,6 @@
 import { TefiDB } from "../services/tefiDB"
 import { blobToBase64 } from "./features/BlobToBase64"
-import { injectCurrentTab } from "./features/injectCurrentTab"
-import { injectForId } from "./features/injectForId"
+import { injectTab } from "./features/injectCurrentTab"
 import { openNewTab } from "./features/openNewTab"
 import { waiting } from "./features/waiting"
 import { IRequest } from "../models/IRequest"
@@ -10,7 +9,7 @@ import { createRequest } from "./utils/createRequestBackground"
 
 setInitialConfigInStorage();
 
-chrome.runtime.onMessage.addListener(async function (request: IRequest) {
+chrome.runtime.onMessage.addListener(async function (request: IRequest, sender) {
 
     if (request.action === 'setConfig') {
         await setConfigInStorage(request.config);
@@ -38,7 +37,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                         if (tab.id) {
                             request.action = "injectTheme"
                             request.config.theme = theme
-                            injectForId(tab.id, request)
+                            injectTab(request, tab.id)
                         }
                     })
                 }
@@ -65,8 +64,8 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
 
             request.action = "loadRoadMap"
             if (stdOpened.length > 0 && stdOpened[0].id) {
-                chrome.tabs.update(stdOpened[0].id, { active: true })
-                injectForId(stdOpened[0].id, request)
+                chrome.tabs.update(stdOpened[0].id, { active: false })
+                injectTab(request, stdOpened[0].id)
             } else {
                 openNewTab('https://std.mtc.gob.pe/tramite/', request)
             }
@@ -75,21 +74,21 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
     if (request.action === 'waiting') {
         if (request.nextScript && request.nextScript.length > 0) {
             request.action = request.nextScript
-            waiting(request)
+            waiting(request, sender.tab?.id)
         }
     }
 
     if (request.action === 'inCurrentTab') {
         if (request.nextScript && request.nextScript.length > 0) {
             request.action = request.nextScript
-            injectCurrentTab(request)
+            injectTab(request, sender.tab?.id)
         }
     }
     if (request.action === 'inCurrentTabWithDelay') {
         setTimeout(() => {
             if (request.nextScript && request.nextScript.length > 0) {
                 request.action = request.nextScript
-                injectCurrentTab(request)
+                injectTab(request, sender.tab?.id)
             }
         }, request.delay)
     }
@@ -139,7 +138,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                 request.content.docBase64 = base64.toString()
                 request.action = "downloadFitacNew";
                 request.content.fileName = `${request.content.fitacData.document_name}_OFICIO`;
-                injectCurrentTab(request);
+                injectTab(request, sender.tab?.id);
             } else {
                 console.error("No se pudo generar el blob para la conversión a base64.");
             }
@@ -189,7 +188,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                 request.content.docBase64 = base64.toString()
                 request.action = "downloadFitacNew";
                 request.content.fileName = `${request.content.fitacData.document_name}_INFORME`;
-                injectCurrentTab(request);
+                injectTab(request, sender.tab?.id);
             } else {
                 console.error("No se pudo generar el blob para la conversión a base64.");
             }

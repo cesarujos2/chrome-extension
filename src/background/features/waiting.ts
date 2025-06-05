@@ -1,14 +1,30 @@
 import { IRequest } from "../../models/IRequest";
 
-export function waiting(request: IRequest) {
-    if(request.action.length > 0) {
+/**
+ * Espera a que una pestaña específica (o la actual si no se indica) termine de cargar
+ * completamente y luego le envía un mensaje (request).
+ * 
+ * @param tabId - El ID de la pestaña destino (o null para usar la pestaña activa)
+ * @param request - El mensaje que se desea enviar a la pestaña
+ */
+export function waiting(request: IRequest, tabId?: number) {
+    const waitAndSend = (targetTabId: number) => {
+        chrome.tabs.onUpdated.addListener(function listener(updatedTabId, changeInfo) {
+            if (updatedTabId === targetTabId && changeInfo.status === "complete") {
+                chrome.tabs.sendMessage(targetTabId, request);
+                chrome.tabs.onUpdated.removeListener(listener);
+            }
+        });
+    };
+
+    if (tabId != null) {
+        waitAndSend(tabId);
+    } else {
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-            chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
-                if (tabId === tabs[0].id && changeInfo.status === "complete") {
-                    chrome.tabs.sendMessage(tabs[0].id, request);
-                    chrome.tabs.onUpdated.removeListener(listener);
-                }
-            });
+            if (tabs.length > 0 && tabs[0].id !== undefined) {
+                waitAndSend(tabs[0].id);
+            }
         });
     }
 }
+
