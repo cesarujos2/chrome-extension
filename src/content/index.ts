@@ -11,6 +11,7 @@ import { copyText } from './features/copyText';
 import { sendMessageAsync } from './utils/sendMessageAsync';
 import { addButtonFITAC } from './features/addButtonFITAC';
 import { whileAsync } from './features/whileAsync';
+import { createDropZone, getPDFById } from './features/createDropZone';
 
 chrome.runtime.onMessage.addListener(async function (request: IRequest) {
     if (request.action === 'loadRoadMap') {
@@ -528,11 +529,16 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         buttons.forEach(x => {
             x.textContent == 'Generar Doc.' && x.click();
         })
-        if (!request.content.isOffice) {
+        
+        if (!request.content.isOffice && !request.content.usedDragAndDrop) {
             const linkShowUploadPdf = await findElementWithRetry("#idproyectonuevo\\:linkShowUploadPdf")
             if (!linkShowUploadPdf) { return; }
             linkShowUploadPdf.click()
         }
+        if (request.content.usedDragAndDrop) {
+            await insertDocumentFromIndexedDB(request.content.fitacData.document_name ?? "");
+        }
+
         const sectionDocFirmado = await findElementWithRetry("#idproyectonuevo\\:seccionDocFirmado") as HTMLDivElement
         if (!sectionDocFirmado) { return; }
         const seccionBotones = Array.from(document.getElementById("idproyectonuevo:seccionBotones")?.querySelectorAll("button") ?? []) as HTMLButtonElement[]
@@ -604,6 +610,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
 
 modifyTable();
 addButtonFITAC();
+createDropZone();
 
 const request = createRequest()
 request.action = "getTheme"
@@ -626,3 +633,22 @@ const config = { childList: true, subtree: true };
 observer.observe(document.body, config);
 
 
+async function insertDocumentFromIndexedDB(id: string) {
+    const pdfEntry = await getPDFById(id);
+    if (!pdfEntry) {
+        console.error(`No se encontró el PDF con ID: ${id}`);
+        return;
+    }
+
+    const linkShowUploadPdf = await findElementWithRetry("#idproyectonuevo\\:linkShowUploadPdf", 1000, 1000) as HTMLDivElement
+    if (!linkShowUploadPdf) { return; }
+    const inputFile = await findElementWithRetry('#formCargarPDf\\:iduploadPDf_input', 1000, 1000) as HTMLInputElement
+    if (!inputFile) { return; }
+
+    const file = pdfEntry.file;
+
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    inputFile.files = dataTransfer.files;
+    inputFile.dispatchEvent(new Event('change', { bubbles: true }));
+}

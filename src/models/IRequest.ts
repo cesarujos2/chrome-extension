@@ -7,6 +7,7 @@ export interface IRequest {
         docBase64: string;
         fileName: string;
         isOffice: boolean;
+        usedDragAndDrop: boolean;
     };
     nextScript?: string;
     delay?: number;

@@ -12,6 +12,7 @@ export function createRequest(): IRequest {
         fileName: "",
         docBase64: "",
         fitacData: {},
+        usedDragAndDrop: false,
       },
       config: {
         theme: "light",
