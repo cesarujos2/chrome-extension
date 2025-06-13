@@ -6,7 +6,9 @@
     "permissions": ["tabs",
       "storage",
       "contextMenus",
-      "clipboardWrite"],
+      "clipboardWrite",
+      "notifications"
+    ],
     "action": {
       "default_popup": "index.html",
       "default_icon": {

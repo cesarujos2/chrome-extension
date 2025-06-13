@@ -5,6 +5,16 @@ import { openNewTab } from "./features/openNewTab"
 import { waiting } from "./features/waiting"
 import { IRequest } from "../models/IRequest"
 import { createRequest } from "./utils/createRequestBackground"
+import { DervNotifier } from "./features/sendNotificacion"
+
+const NOTIFY_DATA = {
+    DervProgress: {
+        title: "Derivación en progreso",
+        progress: (index: number, maxIndex: number) => (index / maxIndex) * 100,
+        message: (roadmap: string, index: number, count: number) => `Procesando hoja de ruta ${roadmap} (${index + 1} de ${count})`,
+        id: "derv_progress_notificar"
+    }
+}
 
 
 setInitialConfigInStorage();
@@ -46,9 +56,21 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest, sender) 
     }
 
     if (request.action === 'searchRoadMap') {
-        const config = await getConfigFromStorage()
-        const roadmap = request.content.documents[request.content.index]
-        if (!roadmap) { return }
+        const config = await getConfigFromStorage();
+        const { documents, index } = request.content;
+        const roadmap = documents[index];
+        if (!roadmap) return DervNotifier.clear(NOTIFY_DATA.DervProgress.id);
+
+        if (index == 0) {
+            DervNotifier.clear(NOTIFY_DATA.DervProgress.id);
+            DervNotifier.sendProgress(NOTIFY_DATA.DervProgress.id, 0, NOTIFY_DATA.DervProgress.message(roadmap, index, documents.length));
+        } else {
+            DervNotifier.updateProgress(
+                NOTIFY_DATA.DervProgress.id,
+                NOTIFY_DATA.DervProgress.progress(index, documents.length),
+                NOTIFY_DATA.DervProgress.message(roadmap, index, documents.length));
+        }
+
         const data = await TefiDB.getFitac(roadmap)
         if (data.length == 0) { return }
         request.content.fitacData = data[0]
