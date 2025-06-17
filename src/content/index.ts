@@ -12,11 +12,20 @@ import { sendMessageAsync } from './utils/sendMessageAsync';
 import { addButtonFITAC } from './features/addButtonFITAC';
 import { whileAsync } from './features/whileAsync';
 import { createDropZone, getPDFById } from './features/createDropZone';
+import { isNullOrWhiteSpace } from './features/isNullOrWhiteSpace';
 
 chrome.runtime.onMessage.addListener(async function (request: IRequest) {
     if (request.action === 'loadRoadMap') {
         const fromLogin = document.getElementById('frmLogin') as HTMLFormElement
         if (!fromLogin) {
+            var errorNative = document.querySelector("body")?.textContent?.trim();
+            if(errorNative && errorNative.length > 0 && errorNative.includes("This XML file")) {
+                location.reload();
+                request.action = 'waiting';
+                request.nextScript = 'isRepeatRoadMap';
+                chrome.runtime.sendMessage(request);
+            }
+
             const roadmap = request.content.fitacData.document_name
             if (roadmap && roadmap.length > 0) {
                 let inputHRSTD = document.getElementById('idformbusq:idhrbuscar') as HTMLInputElement
@@ -36,6 +45,26 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                 request.nextScript = 'isRepeatRoadMap';
                 chrome.runtime.sendMessage(request);
             }
+        } else {
+            var userId = (fromLogin.elements.namedItem("iduser") as HTMLInputElement).value
+            var password = (fromLogin.elements.namedItem("idpassword") as HTMLInputElement).value
+            var unitOrganic = (fromLogin.elements.namedItem("cboListUnidad") as HTMLInputElement).value
+
+            await whileAsync(() => isNullOrWhiteSpace(userId) || isNullOrWhiteSpace(password) || isNullOrWhiteSpace(unitOrganic) || unitOrganic != "571",
+                () => {
+                    userId = (fromLogin.elements.namedItem("iduser") as HTMLInputElement).value
+                    password = (fromLogin.elements.namedItem("idpassword") as HTMLInputElement).value
+                    unitOrganic = (fromLogin.elements.namedItem("cboListUnidad") as HTMLInputElement).value
+                }, (err) => console.error(err), 100, 100
+            )
+
+            const button = fromLogin.elements.namedItem("commit") as HTMLButtonElement
+            button.click();
+
+            // Emitir un evento cuando se hace clic en el botón de búsqueda
+            request.action = 'waiting';
+            request.nextScript = 'loadRoadMap';
+            chrome.runtime.sendMessage(request);
         }
     }
     if (request.action === 'isRepeatRoadMap') {
@@ -529,7 +558,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         buttons.forEach(x => {
             x.textContent == 'Generar Doc.' && x.click();
         })
-        
+
         if (!request.content.isOffice && !request.content.usedDragAndDrop) {
             const linkShowUploadPdf = await findElementWithRetry("#idproyectonuevo\\:linkShowUploadPdf")
             if (!linkShowUploadPdf) { return; }

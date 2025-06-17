@@ -1,11 +1,10 @@
 export async function whileAsync(
     condition: () => boolean | Promise<boolean>,
     action: () => void | Promise<void>,
-    ifError?: (error: Error) => void
+    ifError?: (error: Error) => void,
+    maxAttempts: number = 100,
+    delayMs: number = 1000
 ): Promise<void> {
-    const maxAttempts = 100;
-    const delayMs = 1000;
-    
     for (let attempts = 0; attempts < maxAttempts; attempts++) {
         try {
             const shouldContinue = await condition();
