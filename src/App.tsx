@@ -3,11 +3,15 @@ import './App.css'
 import Options from './components/Options'
 import FormRedaction from './components/FormRedaction'
 import { ThemeSwitch } from './components/core/theme-switch'
+import FormSeeker from './components/FormSeeker'
 
 function App() {
   return (
     <div className='pt-2 w-96'>
       <Tabs aria-label="tabs" fullWidth={true} variant='underlined' color='primary'>
+        <Tab key={'seeker'} title="Generar oficio">
+          <FormSeeker/>
+        </Tab>
         <Tab key='configuration' title='Configuración'>
           <Options />
         </Tab>
