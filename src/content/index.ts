@@ -19,7 +19,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         const fromLogin = document.getElementById('frmLogin') as HTMLFormElement
         if (!fromLogin) {
             var errorNative = document.querySelector("body")?.textContent?.trim();
-            if(errorNative && errorNative.length > 0 && errorNative.includes("This XML file")) {
+            if (errorNative && errorNative.length > 0 && errorNative.includes("This XML file")) {
                 location.reload();
                 request.action = 'waiting';
                 request.nextScript = 'isRepeatRoadMap';
@@ -97,14 +97,34 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         const table = document.getElementById("formvistahojaderuta:tabview:movimientos")?.querySelector("table");
 
         if (table) {
-            const rows = table.querySelectorAll("tr");
+            const rows = table.querySelector("tbody")?.children;
+            if (!rows || rows.length == 0) return;
 
-            for (const row of rows) {
+            for (const [i, row] of Array.from(rows).entries()) {
                 const cells = row.querySelectorAll("td");
                 if (cells.length > 0) {
                     const lastCell = cells[cells.length - 1];
-                    if ((lastCell?.textContent?.trim().toUpperCase() === "VISAR" && request.content.isOffice) ||
-                        (lastCell?.textContent?.trim().toUpperCase() === "FIRMAR" && !request.content.isOffice)) {
+                    const lastCellContent = lastCell?.textContent?.trim().toUpperCase();
+                    const thirdLastCell = cells[cells.length - 3];
+                    const thirdLastCellContent = thirdLastCell?.textContent?.trim();
+
+                    console.log(row)
+
+                    const nextRow = rows[i + 1];
+                    const nextRowCells = nextRow?.children;
+                    const thirdLastCellNextRow = nextRowCells?.[nextRowCells?.length - 3];
+                    const thirdLastCellNextRowContent = thirdLastCellNextRow?.textContent?.trim();
+
+                    const secondNextRow = rows[i + 2];
+
+                    console.log(i, rows.length)
+
+                    if ((lastCellContent === "VISAR" && request.content.isOffice && (
+                        thirdLastCellNextRowContent?.includes(".pdf") || !secondNextRow
+                    )) ||
+                        (lastCellContent === "FIRMAR" && !request.content.isOffice && (
+                            thirdLastCellContent?.includes(".pdf") || !nextRow
+                        ))) {
                         ModalOverlay.showModal("Ya ha sido derivado!",
                             () => {
                                 request.action = "inCurrentTab"
