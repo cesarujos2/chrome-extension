@@ -13,6 +13,7 @@ import { addButtonFITAC } from './features/addButtonFITAC';
 import { whileAsync } from './features/whileAsync';
 import { createDropZone, getPDFById } from './features/createDropZone';
 import { isNullOrWhiteSpace } from './features/isNullOrWhiteSpace';
+import { AddAiImprover } from './features/addIAiImprover';
 
 chrome.runtime.onMessage.addListener(async function (request: IRequest) {
     if (request.action === 'loadRoadMap') {
@@ -101,14 +102,12 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
             if (!rows || rows.length == 0) return;
 
             for (const [i, row] of Array.from(rows).entries()) {
-                const cells = row.querySelectorAll("td");
+                const cells = row.children;
                 if (cells.length > 0) {
                     const lastCell = cells[cells.length - 1];
                     const lastCellContent = lastCell?.textContent?.trim().toUpperCase();
                     const thirdLastCell = cells[cells.length - 3];
                     const thirdLastCellContent = thirdLastCell?.textContent?.trim();
-
-                    console.log(row)
 
                     const nextRow = rows[i + 1];
                     const nextRowCells = nextRow?.children;
@@ -116,8 +115,6 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                     const thirdLastCellNextRowContent = thirdLastCellNextRow?.textContent?.trim();
 
                     const secondNextRow = rows[i + 2];
-
-                    console.log(i, rows.length)
 
                     if ((lastCellContent === "VISAR" && request.content.isOffice && (
                         thirdLastCellNextRowContent?.includes(".pdf") || !secondNextRow
@@ -660,6 +657,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
 modifyTable();
 addButtonFITAC();
 createDropZone();
+AddAiImprover();
 
 const request = createRequest()
 request.action = "getTheme"

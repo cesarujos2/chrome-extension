@@ -227,7 +227,7 @@ export async function modifyTable() {
                 var isDisabledCheckbox = (document.getElementById("massall_top") as HTMLInputElement)?.disabled;
 
                 if (isDisabledCheckbox) {
-                    const data = await getAllOfficeDataTable();
+                    const data = await getAllFitacDataTable();
                     if (!data || data.length === 0) {
                         ModalOverlay.showModal("No se encontraron datos para generar el oficio. Esta opción solo aplica a fichas del SRFITAC.");
                         return;
@@ -281,7 +281,7 @@ export async function modifyTable() {
 }
 
 
-export const getAllOfficeDataTable = async () => {
+export const getAllFitacDataTable = async () => {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/x-www-form-urlencoded");
 
