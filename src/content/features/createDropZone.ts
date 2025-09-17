@@ -86,7 +86,7 @@ export function createDropZone(): void {
     fontSize: '12px',
     cursor: 'pointer',
   });
-  dropZone.textContent = 'Derivar informe';
+  dropZone.textContent = 'Derivar masivo';
   document.body.appendChild(dropZone);
 
   dropZone.addEventListener('dragover', (e) => {
