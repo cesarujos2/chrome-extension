@@ -104,7 +104,7 @@ export function createDropZone(): void {
     dropZone.textContent = 'Procesando...';
     const items = e.dataTransfer?.items;
     if (!items) {
-      dropZone.textContent = 'Derivar informe';
+      dropZone.textContent = 'Derivar masivo';
       console.error('No se encontraron elementos en la transferencia de datos.');
       return;
     }
@@ -153,15 +153,23 @@ export function createDropZone(): void {
     } catch (error) {
       console.error('Error processing files:', error);
     } finally {
-      dropZone.textContent = 'Derivar informe';
+      dropZone.textContent = 'Derivar masivo';
 
-      const request = createRequest()
+      try {
+        // Modal para seleccionar tipo de documento
+        const isOffice = await showDocumentTypeModal();
 
-      request.action = "searchRoadMap"
-      request.content.isOffice = false
-      request.content.documents = pdfIdList;
-      request.content.usedDragAndDrop = true;
-      chrome.runtime.sendMessage(request);
+        const request = createRequest()
+
+        request.action = "searchRoadMap"
+        request.content.isOffice = isOffice;
+        request.content.documents = pdfIdList;
+        request.content.usedDragAndDrop = true;
+        chrome.runtime.sendMessage(request);
+      } catch (error) {
+        console.log('Modal cancelled by user, process aborted');
+        // No enviamos el request si el usuario cancela
+      }
     }
   });
 }
@@ -227,6 +235,169 @@ async function readFolder(
     return count;
   }
 }
+
+
+// Función para mostrar modal de selección de tipo de documento
+async function showDocumentTypeModal(): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    // Crear overlay con efecto blur
+    const overlay = document.createElement('div');
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      backdropFilter: 'blur(8px)',
+      zIndex: '10000',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      opacity: '0',
+      transition: 'opacity 0.15s ease-out'
+    });
+
+    // Crear modal modo oscuro
+    const modal = document.createElement('div');
+    Object.assign(modal.style, {
+      background: '#000000',
+      padding: '32px 28px',
+      borderRadius: '16px',
+      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
+      textAlign: 'center',
+      maxWidth: '320px',
+      width: '90%',
+      transform: 'scale(0.95) translateY(10px)',
+      transition: 'all 0.15s ease-out'
+    });
+
+    // Título elegante modo oscuro
+    const title = document.createElement('h2');
+    title.textContent = 'Tipo de documento';
+    Object.assign(title.style, {
+      margin: '0 0 24px 0',
+      color: '#ffffff',
+      fontSize: '20px',
+      fontWeight: '600',
+      letterSpacing: '-0.025em',
+      lineHeight: '1.2'
+    });
+
+    // Contenedor de botones horizontales
+    const buttonContainer = document.createElement('div');
+    Object.assign(buttonContainer.style, {
+      display: 'flex',
+      gap: '12px',
+      justifyContent: 'center'
+    });
+
+    // Botón Informe
+    const informeBtn = document.createElement('button');
+    informeBtn.textContent = 'Informe';
+    Object.assign(informeBtn.style, {
+      padding: '10px 20px',
+      background: '#ffffff',
+      color: '#000000',
+      border: 'none',
+      borderRadius: '8px',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: '600',
+      letterSpacing: '0.025em',
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      outline: 'none',
+      minWidth: '80px'
+    });
+
+    // Botón Oficio 2024
+    const oficioBtn = document.createElement('button');
+    oficioBtn.textContent = 'Oficio 2024';
+    Object.assign(oficioBtn.style, {
+      padding: '10px 20px',
+      background: 'rgba(255, 255, 255, 0.1)',
+      color: '#ffffff',
+      border: 'none',
+      borderRadius: '8px',
+      cursor: 'pointer',
+      fontSize: '14px',
+      fontWeight: '500',
+      letterSpacing: '0.025em',
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      outline: 'none',
+      minWidth: '80px'
+    });
+
+    // Event listeners con animaciones
+    informeBtn.addEventListener('click', () => {
+      overlay.style.opacity = '0';
+      modal.style.transform = 'scale(0.95) translateY(10px)';
+      setTimeout(() => {
+        document.body.removeChild(overlay);
+        resolve(false);
+      }, 150);
+    });
+
+    oficioBtn.addEventListener('click', () => {
+      overlay.style.opacity = '0';
+      modal.style.transform = 'scale(0.95) translateY(10px)';
+      setTimeout(() => {
+        document.body.removeChild(overlay);
+        resolve(true);
+      }, 150);
+    });
+
+    // Cerrar modal al hacer clic fuera
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.style.opacity = '0';
+        modal.style.transform = 'scale(0.95) translateY(10px)';
+        setTimeout(() => {
+          document.body.removeChild(overlay);
+          reject(new Error('Modal cancelled by user'));
+        }, 150);
+      }
+    });
+
+    // Hover effects modo oscuro
+    informeBtn.addEventListener('mouseenter', () => {
+      informeBtn.style.background = '#f0f0f0';
+      informeBtn.style.transform = 'translateY(-1px)';
+    });
+    
+    informeBtn.addEventListener('mouseleave', () => {
+      informeBtn.style.background = '#ffffff';
+      informeBtn.style.transform = 'translateY(0)';
+    });
+
+    oficioBtn.addEventListener('mouseenter', () => {
+      oficioBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+      oficioBtn.style.transform = 'translateY(-1px)';
+    });
+    
+    oficioBtn.addEventListener('mouseleave', () => {
+      oficioBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+      oficioBtn.style.transform = 'translateY(0)';
+    });
+
+    // Ensamblar modal
+    buttonContainer.appendChild(oficioBtn);
+    buttonContainer.appendChild(informeBtn);
+    modal.appendChild(title);
+    modal.appendChild(buttonContainer);
+    overlay.appendChild(modal);
+
+    // Agregar al DOM con animación de entrada
+    document.body.appendChild(overlay);
+    
+    // Trigger animación de entrada
+    requestAnimationFrame(() => {
+      overlay.style.opacity = '1';
+      modal.style.transform = 'scale(1) translateY(0)';
+    });
+  });
+}
+
 
 // Interfaces (sin cambios)
 interface FileSystemEntry {
