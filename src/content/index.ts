@@ -544,7 +544,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         )
 
         buttons?.[0].click()
-        if (request.content.isOffice) {
+        if (request.content.isOffice && !request.content.usedDragAndDrop) {
             //Descargar documento si es oficio
             request.action = "getOfficeFitac"
             chrome.runtime.sendMessage(request);
