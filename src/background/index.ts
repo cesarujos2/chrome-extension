@@ -11,7 +11,7 @@ const NOTIFY_DATA = {
     DervProgress: {
         title: "Derivación en progreso",
         progress: (index: number, maxIndex: number) => (index / maxIndex) * 100,
-        message: (roadmap: string, index: number, count: number) => `Procesando hoja de ruta ${roadmap} (${index + 1} de ${count})`,
+        message: (roadmap: string, index: number, count: number) => `${roadmap}: (${index + 1} de ${count})`,
         id: "derv_progress_notificar"
     }
 }
