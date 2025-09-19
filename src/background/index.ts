@@ -21,10 +21,6 @@ setInitialConfigInStorage();
 
 chrome.runtime.onMessage.addListener(async function (request: IRequest, sender) {
 
-    if (request.action === 'setConfig') {
-        await setConfigInStorage(request.config);
-    }
-
     if (request.action === 'setRoadmapGenerated') {
         const roadmap = request.content.fitacData.document_name
         if (roadmap) {
@@ -74,7 +70,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest, sender) 
                 if (config?.omitDerivatives && roadmapGenerated?.includes(roadmap)) {
                     throw new Error(`Omitir Derivadas activado: Roadmap ${roadmap} ya fue derivado previamente`);
                 }
-                
+
                 // Actualizar notificación de progreso
                 if (currentIndex === 0) {
                     DervNotifier.clear(NOTIFY_DATA.DervProgress.id);
@@ -276,6 +272,23 @@ chrome.runtime.onMessage.addListener(
         return true;
     }
 );
+
+chrome.runtime.onMessage.addListener((request: IRequest, _sender, sendResponse) => {
+    if (request.action === 'getConfig') {
+        getConfigFromStorage()
+            .then((config) => {
+                sendResponse(config);
+            })
+            .catch(() => {
+                sendResponse({});
+            });
+        return true;
+    }
+
+    if (request.action === 'setConfig') {
+        setConfigInStorage(request.config);
+    }
+})
 
 function setInitialConfigInStorage() {
     const config = getConfigFromStorage()

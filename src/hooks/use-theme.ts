@@ -45,10 +45,24 @@ export const useTheme = (defaultTheme?: Theme) => {
     theme === ThemeProps.dark ? setLightTheme() : setDarkTheme();
 
   useEffect(() => {
-    const request: IRequest = createRequest()
-    request.config.theme = theme
-    request.action = "setConfig"
-    chrome.runtime.sendMessage(request);
+    // Primero obtener la configuración existente
+    const getConfigRequest: IRequest = createRequest();
+    getConfigRequest.action = "getConfig";
+    
+    chrome.runtime.sendMessage(getConfigRequest, (existingConfig) => {
+      // Crear request para actualizar la configuración con el tema actual
+      const setConfigRequest: IRequest = createRequest();
+      setConfigRequest.action = "setConfig";
+      
+      // Mantener la configuración existente y solo actualizar el tema
+      setConfigRequest.config = {
+        ...existingConfig,
+        theme: theme
+      };
+      
+      chrome.runtime.sendMessage(setConfigRequest);
+    });
+    
     _setTheme(theme);
   });
 
