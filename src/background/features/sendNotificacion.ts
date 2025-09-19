@@ -1,6 +1,7 @@
 export class DervNotifier {
     private static readonly ICON = "icons/icon48.png";
-    private static readonly TITLE = "Derv en progreso";
+    private static readonly TITLE = "Derivador encendido";
+    private static readonly CONTEXT_MESSAGE = "Tómalo con calma, esto tomará su tiempo";
 
     /**
      * Crea una notificación de progreso en Chrome.
@@ -25,6 +26,7 @@ export class DervNotifier {
                     iconUrl: this.ICON,
                     title: this.TITLE,
                     message,
+                    contextMessage: this.CONTEXT_MESSAGE,
                     progress: Math.round(clampedProgress),
                     priority: 1,
                 },

@@ -56,80 +56,84 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest, sender) 
     }
 
     if (request.action === 'searchRoadMap') {
-    const config = await getConfigFromStorage();
-    const { documents, index } = request.content;
-    
-    // Función recursiva para procesar roadmaps
-    const processRoadmap = async (currentIndex: number) => {
-        // Verificar si hemos llegado al final de la lista
-        if (currentIndex >= documents.length) {
-            DervNotifier.clear(NOTIFY_DATA.DervProgress.id);
-            return;
-        }
+        const config = await getConfigFromStorage();
+        const roadmapGenerated = await getRoadMapsGeneratedInStorage(request.content.isOffice);
+        const { documents, index } = request.content;
 
-        const roadmap = documents[currentIndex];
-        
-        // Actualizar notificación de progreso
-        if (currentIndex === 0) {
-            DervNotifier.clear(NOTIFY_DATA.DervProgress.id);
-            DervNotifier.sendProgress(
-                NOTIFY_DATA.DervProgress.id, 
-                0, 
-                NOTIFY_DATA.DervProgress.message(roadmap, currentIndex, documents.length)
-            );
-        } else {
-            DervNotifier.updateProgress(
-                NOTIFY_DATA.DervProgress.id,
-                NOTIFY_DATA.DervProgress.progress(currentIndex, documents.length),
-                NOTIFY_DATA.DervProgress.message(roadmap, currentIndex, documents.length)
-            );
-        }
+        // Función recursiva para procesar roadmaps
+        const processRoadmap = async (currentIndex: number) => {
+            const roadmap = documents[currentIndex];
+            try {
+                // Verificar si hemos llegado al final de la lista
+                if (currentIndex >= documents.length) {
+                    DervNotifier.clear(NOTIFY_DATA.DervProgress.id);
+                    return;
+                }
 
-        try {
-            // Intentar obtener datos de FITAC
-            const data = await TefiDB.getFitac(roadmap);
-            
-            // Si no hay datos o está vacío, procesar el siguiente roadmap
-            if (!data || data.length === 0) {
-                console.warn(`No se encontraron datos para la hoja de ruta ${roadmap}, saltando al siguiente...`);
-                return processRoadmap(currentIndex + 1);
-            }
+                // Omite derivadas si está activado y el roadmap ya fue derivado previamente
+                if (config?.omitDerivatives && roadmapGenerated?.includes(roadmap)) {
+                    throw new Error(`Omitir Derivadas activado: Roadmap ${roadmap} ya fue derivado previamente`);
+                }
+                
+                // Actualizar notificación de progreso
+                if (currentIndex === 0) {
+                    DervNotifier.clear(NOTIFY_DATA.DervProgress.id);
+                    DervNotifier.sendProgress(
+                        NOTIFY_DATA.DervProgress.id,
+                        0,
+                        NOTIFY_DATA.DervProgress.message(roadmap, currentIndex, documents.length)
+                    );
+                } else {
+                    DervNotifier.updateProgress(
+                        NOTIFY_DATA.DervProgress.id,
+                        NOTIFY_DATA.DervProgress.progress(currentIndex, documents.length),
+                        NOTIFY_DATA.DervProgress.message(roadmap, currentIndex, documents.length)
+                    );
+                }
 
-            // Si tenemos datos válidos, proceder con la ejecución
-            request.content.fitacData = data[0];
-            request.content.isOffice = request.content.isOffice;
-            request.content.index = currentIndex; // Actualizar índice actual
-            request.config = config;
+                // Intentar obtener datos de FITAC
+                const data = await TefiDB.getFitac(roadmap);
 
-            // Buscar y abrir tab STD
-            chrome.tabs.query({ windowType: 'normal' }, function (tabs) {
-                const stdOpened = tabs.filter(tab => {
-                    if (tab.url) {
-                        return tab.url.includes('https://std.mtc.gob.pe');
+                // Si no hay datos o está vacío, procesar el siguiente roadmap
+                if (!data || data.length === 0) {
+                    throw new Error(`No se encontraron datos para la hoja de ruta ${roadmap}`);
+                }
+
+                // Si tenemos datos válidos, proceder con la ejecución
+                request.content.fitacData = data[0];
+                request.content.isOffice = request.content.isOffice;
+                request.content.index = currentIndex; // Actualizar índice actual
+                request.config = config;
+
+                // Buscar y abrir tab STD
+                chrome.tabs.query({ windowType: 'normal' }, function (tabs) {
+                    const stdOpened = tabs.filter(tab => {
+                        if (tab.url) {
+                            return tab.url.includes('https://std.mtc.gob.pe');
+                        }
+                        return false;
+                    });
+
+                    request.action = "loadRoadMap";
+
+                    if (stdOpened.length > 0 && stdOpened[0].id) {
+                        chrome.tabs.update(stdOpened[0].id, { active: false });
+                        injectTab(request, stdOpened[0].id);
+                    } else {
+                        openNewTab('https://std.mtc.gob.pe/tramite/', request);
                     }
-                    return false;
                 });
 
-                request.action = "loadRoadMap";
-                
-                if (stdOpened.length > 0 && stdOpened[0].id) {
-                    chrome.tabs.update(stdOpened[0].id, { active: false });
-                    injectTab(request, stdOpened[0].id);
-                } else {
-                    openNewTab('https://std.mtc.gob.pe/tramite/', request);
-                }
-            });
+            } catch (error) {
+                // Si hay error en TefiDB.getFitac, procesar el siguiente roadmap
+                console.warn(`Advertencia: ${roadmap}:`, error);
+                return processRoadmap(currentIndex + 1);
+            }
+        };
 
-        } catch (error) {
-            // Si hay error en TefiDB.getFitac, procesar el siguiente roadmap
-            console.error(`Error al obtener datos para la hoja de ruta ${roadmap}:`, error);
-            return processRoadmap(currentIndex + 1);
-        }
-    };
-
-    // Iniciar el procesamiento desde el índice actual
-    await processRoadmap(index);
-}
+        // Iniciar el procesamiento desde el índice actual
+        await processRoadmap(index);
+    }
     if (request.action === 'waiting') {
         if (request.nextScript && request.nextScript.length > 0) {
             request.action = request.nextScript

@@ -16,7 +16,8 @@ export function createRequest(): IRequest {
       },
       config: {
         theme: "light",
-        signLegal: false
+        signLegal: false,
+        omitDerivatives: false,
       },
     };
   }

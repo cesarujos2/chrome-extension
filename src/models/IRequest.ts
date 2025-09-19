@@ -14,6 +14,7 @@ export interface IRequest {
     config: {
         theme: string;
         signLegal: boolean;
+        omitDerivatives: boolean;
     }
 }
 
