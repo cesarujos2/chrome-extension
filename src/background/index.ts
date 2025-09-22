@@ -52,8 +52,14 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest, sender) 
     }
 
     if (request.action === 'searchRoadMap') {
+        // Se añade la configuración al request
         const config = await getConfigFromStorage();
+        request.config = config;
+
+        // Se obtiene la lista de roadmaps derivados previamente
         const roadmapGenerated = await getRoadMapsGeneratedInStorage(request.content.isOffice);
+
+        // Se obtiene la lista de roadmaps a derivar y el indice de la derivación actual
         const { documents, index } = request.content;
 
         // Función recursiva para procesar roadmaps
@@ -62,7 +68,9 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest, sender) 
             try {
                 // Verificar si hemos llegado al final de la lista
                 if (currentIndex >= documents.length) {
+                    request.action = "finishedProcess"
                     DervNotifier.clear(NOTIFY_DATA.DervProgress.id);
+                    injectTab(request)
                     return;
                 }
 
@@ -72,7 +80,7 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest, sender) 
                 }
 
                 // Actualizar notificación de progreso
-                if (currentIndex === 0) {
+                if (!(await DervNotifier.exists(NOTIFY_DATA.DervProgress.id))) {
                     DervNotifier.clear(NOTIFY_DATA.DervProgress.id);
                     DervNotifier.sendProgress(
                         NOTIFY_DATA.DervProgress.id,
@@ -99,7 +107,6 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest, sender) 
                 request.content.fitacData = data[0];
                 request.content.isOffice = request.content.isOffice;
                 request.content.index = currentIndex; // Actualizar índice actual
-                request.config = config;
 
                 // Buscar y abrir tab STD
                 chrome.tabs.query({ windowType: 'normal' }, function (tabs) {

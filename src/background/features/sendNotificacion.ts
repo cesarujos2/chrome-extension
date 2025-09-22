@@ -73,4 +73,19 @@ export class DervNotifier {
     public static clear(notificationId: string): void {
         chrome.notifications.clear(notificationId);
     }
+
+    /**
+     * Valida si existe un notificacion por su ID.
+     */
+    public static async exists(notificationId: string): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            chrome.notifications.getAll((notifications) => {
+                if (chrome.runtime.lastError) {
+                    reject(chrome.runtime.lastError);
+                } else {
+                    resolve(Object.prototype.hasOwnProperty.call(notifications, notificationId));
+                }
+            });
+        });
+    }
 }

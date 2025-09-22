@@ -14,6 +14,7 @@ import { whileAsync } from './features/whileAsync';
 import { createDropZone, getPDFById } from './features/createDropZone';
 import { isNullOrWhiteSpace } from './features/isNullOrWhiteSpace';
 import { AddAiImprover } from './features/addIAiImprover';
+import { notify } from './features/notification.modal';
 
 chrome.runtime.onMessage.addListener(async function (request: IRequest) {
     if (request.action === 'loadRoadMap') {
@@ -650,6 +651,11 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
         if (request.config.theme === "dark") {
             customTefi();
         }
+    }
+
+    if (request.action === "finishedProcess") {
+        // Mostrar modal
+        notify.success("Proceso finalizado con éxito");
     }
 })
 
