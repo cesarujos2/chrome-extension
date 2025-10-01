@@ -147,8 +147,8 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                         }
 
                         ModalOverlay.showModal("Ya ha sido derivado!",
-                            forceGenDoc,
                             nextGenDoc,
+                            forceGenDoc,
                         )
                         return;
                     }
