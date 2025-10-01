@@ -117,12 +117,12 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
 
                     const secondNextRow = rows[i + 2];
 
-                    if ((lastCellContent === "VISAR" && request.content.isOffice && (
+                    if (((lastCellContent === "VISAR" && request.content.isOffice && (
                         thirdLastCellNextRowContent?.includes(".pdf") || !secondNextRow
                     )) ||
                         (lastCellContent === "FIRMAR" && !request.content.isOffice && (
                             thirdLastCellContent?.includes(".pdf") || !nextRow
-                        )) || !request.config.forceDerivatives) {
+                        ))) && !request.config.forceDerivatives) {
 
                         const forceGenDoc = () => {
                                 //* Si el usuario acepta, se hace clic en el botón de "Generar doc. electronico" */
