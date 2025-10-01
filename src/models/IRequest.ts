@@ -15,6 +15,7 @@ export interface IRequest {
         theme: string;
         signLegal: boolean;
         omitDerivatives: boolean;
+        forceDerivatives: boolean;  
     }
 }
 

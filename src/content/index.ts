@@ -122,9 +122,15 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                     )) ||
                         (lastCellContent === "FIRMAR" && !request.content.isOffice && (
                             thirdLastCellContent?.includes(".pdf") || !nextRow
-                        ))) {
-                        ModalOverlay.showModal("Ya ha sido derivado!",
-                            () => {
+                        )) || !request.config.forceDerivatives) {
+
+                        const forceGenDoc = () => {
+                                //* Si el usuario acepta, se hace clic en el botón de "Generar doc. electronico" */
+                                request.action = 'inCurrentTab';
+                                request.nextScript = 'clickOnGenerateDocument';
+                                chrome.runtime.sendMessage(request);
+                            }
+                        const nextGenDoc = () => {
                                 request.action = "inCurrentTab"
                                 request.nextScript = "checkIsMasivo"
                                 chrome.runtime.sendMessage(request);
@@ -135,12 +141,15 @@ chrome.runtime.onMessage.addListener(async function (request: IRequest) {
                                 registerHr.content.fitacData.document_name = request.content.fitacData.document_name
                                 chrome.runtime.sendMessage(registerHr);
                             }
-                            , () => {
-                                //* Si el usuario acepta, se hace clic en el botón de "Generar doc. electronico" */
-                                request.action = 'inCurrentTab';
-                                request.nextScript = 'clickOnGenerateDocument';
-                                chrome.runtime.sendMessage(request);
-                            })
+                        if(request.config.omitDerivatives){
+                            nextGenDoc()
+                            return
+                        }
+
+                        ModalOverlay.showModal("Ya ha sido derivado!",
+                            forceGenDoc,
+                            nextGenDoc,
+                        )
                         return;
                     }
                 }

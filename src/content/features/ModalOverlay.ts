@@ -161,7 +161,6 @@ export class ModalOverlay {
 
       setTimeout(() => {
         this.closeModal();
-        callback();
       }, 5000);
     } else {
       //Cierra el modal si se hace clic fuera del contenido
